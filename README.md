@@ -21,8 +21,9 @@ information, showtimes, community-reported **advertisement durations**, and real
 npm install
 npm run dev              # auto-migrates + seeds data/db.sqlite (libsql) on first run
 npm run build            # production build (Cloudflare Workers module)
-npm run deploy           # build + D1 migrations + seed + wrangler deploy
+npm run deploy           # build + D1 migrations + wrangler deploy (no seeding — prod stays real)
 npm run preview:worker   # serve the built Worker locally via wrangler dev
+node scripts/smoke-test.mjs  # API smoke test against a running dev server
 ```
 
 **Accounts:** create one via *Sign in → Create account* (email + password, 8+ chars).
@@ -56,11 +57,16 @@ getDb(event): dev → libsql file (import.meta.dev, eliminated from Worker build
               prod → event.context.cloudflare.env.DB (D1 binding)
 ```
 
-- **Aggregation** happens in SQL (`ROUND(AVG(ad_duration_minutes),1)`, `COUNT(*)`) —
-  the frontend only renders what the community actually reported (null-safe everywhere:
-  unreported shows display "no reports yet").
+- **Aggregation** happens in SQL — ratings use `AVG` per category; the typical ad duration
+  is the **median of the 20 most recent reports** per show (medians resist "we saw 45 min of
+  ads!" outliers, and the recency window keeps estimates current). `COUNT(*)` supplies report
+  counts and `COUNT(DISTINCT user_id)` the contributor total — the frontend only renders
+  what the community actually reported (null-safe everywhere: unreported shows display
+  "no reports yet").
 - **Upserts** via unique indexes `ad_reports(user,show)` and `ratings(user,cinema)` —
   one ad report per user per show; re-reporting updates the number, not the count.
+- **Spam protection**: auth-gated contributions + a per-user sliding-window rate limit
+  (8 POSTs/min per endpoint, in-memory) + review length cap.
 - **Secrets**: `NUXT_AUTH_SECRET` is a wrangler secret (`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))" | npx wrangler secret put NUXT_AUTH_SECRET`).
 
 ## Database scripts
@@ -71,11 +77,14 @@ npm run seed:generate      # regenerate server/database/seed.sql from scripts/ge
 npm run db:migrate:local   # apply migrations to local D1 (wrangler --local)
 npm run seed:local         # seed local D1
 npm run db:migrate:remote  # apply migrations to production D1
-npm run seed:remote        # seed production D1 (idempotent: INSERT OR IGNORE)
+npm run seed:remote        # ⚠ DEMO ONLY — synthetic data; never run on a DB with real users
 ```
 
-Seed contents: 89 users, 12 cinemas (6 Kochi, 6 Bengaluru), 8 movies, 93 shows
-(dated `date('now')` at seed time), 450 ad reports, 254 ratings.
+Seed contents (**synthetic demo data**, clearly labeled in `seed.sql`; timestamps are
+relative to seed time so the data always looks recent): 89 users (`@demo.cinema` emails,
+purgeable), 12 cinemas (6 Kochi, 6 Bengaluru), 8 movies, 93 shows (dated `date('now')` at
+seed time), 450 ad reports, 254 ratings — all raw rows; every average/median is computed
+by SQL, never stored.
 
 ## What's implemented
 
@@ -83,7 +92,8 @@ Seed contents: 89 users, 12 cinemas (6 Kochi, 6 Bengaluru), 8 movies, 93 shows
 - **Discover**: Leaflet map (55%) + scrollable ticket list (45%), bidirectional pin ↔ card selection
 - **City toggle** (Kochi / Bengaluru) — refetches `/api/cinemas?city=` reactively
 - **Near me**: browser geolocation → haversine distance sort + distances on tickets + map pin
-- **Search** cinemas and movies (filters map + list together)
+- **Search** cinemas and movies (filters map + list together) + **min-rating filter**
+  (Any / 3.5+ / 4.0+ / 4.5+); cinemas with 1–2 ratings show a “limited data” hint
 - **Cinema detail**: overall stars, 6 animated rating bars (IntersectionObserver reveal), audience
   quotes from review text, now-showing list where showtime chips reveal that show's
   **ad-duration estimate** (e.g. *"19:00 listed — ads typically end ≈ 18:41–18:43 · arrive by ≈ 18:55"*)

@@ -113,13 +113,16 @@ function report() {
               <span v-else class="font-display text-2xl text-mist">no reports yet</span>
             </div>
             <p v-if="adsEnd" class="mt-2 font-mono text-xs leading-relaxed text-paper/90">
-              {{ fmt12(selectedShow.startTime) }} listed — ads typically end ≈ {{ fmt12(adsEnd.lo) }}–{{ fmt12(adsEnd.hi) }}.
+              Today · {{ fmt12(selectedShow.startTime) }} listed — ads typically end ≈ {{ fmt12(adsEnd.lo) }}–{{ fmt12(adsEnd.hi) }}.
               Movie starts on time.
             </p>
             <p v-else-if="selectedShow" class="mt-2 font-mono text-xs leading-relaxed text-mist">
               Nobody has reported this show yet — you could be the first.
             </p>
             <div class="mt-3 flex flex-wrap items-center gap-2">
+              <span v-if="activeCinema?.overall != null" class="rounded bg-marquee/15 px-2 py-1 font-mono text-[11px] text-marquee">
+                ⭐ {{ activeCinema.overall.toFixed(1) }}/5 theatre
+              </span>
               <span v-if="arriveBy" class="rounded bg-sage/15 px-2 py-1 font-mono text-[11px] text-sage">
                 ARRIVE BY ≈ {{ fmt12(arriveBy) }}
               </span>

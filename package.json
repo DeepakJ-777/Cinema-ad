@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
-    "deploy": "npm run build && npm run db:migrate:remote && npm run seed:remote && wrangler deploy",
+    "deploy": "npm run build && npm run db:migrate:remote && wrangler deploy",
     "preview:worker": "wrangler dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -16,7 +16,8 @@
     "db:migrate:local": "wrangler d1 migrations apply cinema-community --local",
     "db:migrate:remote": "wrangler d1 migrations apply cinema-community --remote",
     "seed:local": "wrangler d1 execute cinema-community --local --file server/database/seed.sql",
-    "seed:remote": "wrangler d1 execute cinema-community --remote --file server/database/seed.sql"
+    "seed:remote": "wrangler d1 execute cinema-community --remote --file server/database/seed.sql",
+    "test:smoke": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

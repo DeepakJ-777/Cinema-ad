@@ -7,6 +7,7 @@ const fmt = (n: number) => n.toLocaleString('en-IN')
 const cinemaCount = computed(() => cinemas.value.length)
 const totalReports = computed(() => meta.value.adReports)
 const totalRatings = computed(() => meta.value.ratings)
+const contributors = computed(() => meta.value.contributors ?? 0)
 const bulbs = Array.from({ length: 22 }, (_, i) => i)
 
 function scrollToDiscover() {
@@ -53,6 +54,7 @@ function scrollToDiscover() {
           <span><b class="text-marquee">{{ pending ? '…' : fmt(cinemaCount) }}</b> cinemas</span>
           <span><b class="text-marquee">{{ pending ? '…' : fmt(totalReports) }}</b> ad reports</span>
           <span><b class="text-marquee">{{ pending ? '…' : fmt(totalRatings) }}</b> ratings</span>
+          <span><b class="text-marquee">{{ pending ? '…' : fmt(contributors) }}</b> moviegoers</span>
         </div>
 
         <div class="bulb-row mt-8" aria-hidden="true">

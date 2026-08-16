@@ -43,7 +43,7 @@ function rateCinema() {
             <div class="mt-3 flex flex-wrap items-center gap-2">
               <span class="font-mono text-lg text-marquee">{{ stars || '☆☆☆☆☆' }}</span>
               <span class="font-mono text-sm text-paper">{{ activeCinema.overall != null ? `${activeCinema.overall.toFixed(1)}/5` : 'no ratings yet' }}</span>
-              <span class="font-mono text-xs text-mist">{{ activeCinema.ratingCount }} community ratings</span>
+              <span class="font-mono text-xs text-mist">{{ activeCinema.ratingCount }} community rating{{ activeCinema.ratingCount === 1 ? '' : 's' }}<span v-if="activeCinema.ratingCount > 0 && activeCinema.ratingCount < 3" class="text-mist/70"> · limited data</span></span>
             </div>
           </div>
           <button

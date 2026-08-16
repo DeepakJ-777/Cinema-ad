@@ -25,13 +25,14 @@ export interface ContributionInput {
 
 interface Payload {
   cinemas: Cinema[]
-  meta: { adReports: number; ratings: number }
+  meta: { adReports: number; ratings: number; contributors?: number }
 }
 
 export function useCinemaStore() {
   const city = useState<CityId>('cc:city', () => 'kochi')
   const selectedCinemaId = useState<string | null>('cc:sel', () => null)
   const search = useState('cc:search', () => '')
+  const minRating = useState('cc:min-rating', () => 0)
   const userLocation = useState<{ lat: number; lng: number } | null>('cc:loc', () => null)
   const sortByDistance = useState('cc:near', () => false)
   const locating = useState('cc:locating', () => false)
@@ -43,11 +44,11 @@ export function useCinemaStore() {
   const { data, pending, error, refresh } = useFetch<Payload>('/api/cinemas', {
     key: 'cc-cinemas',
     query: { city },
-    default: () => ({ cinemas: [], meta: { adReports: 0, ratings: 0 } }),
+    default: () => ({ cinemas: [], meta: { adReports: 0, ratings: 0, contributors: 0 } }),
   })
 
   const cinemas = computed(() => data.value?.cinemas ?? [])
-  const meta = computed(() => data.value?.meta ?? { adReports: 0, ratings: 0 })
+  const meta = computed(() => data.value?.meta ?? { adReports: 0, ratings: 0, contributors: 0 })
 
   const filteredCinemas = computed(() => {
     const q = search.value.trim().toLowerCase()
@@ -59,6 +60,8 @@ export function useCinemaStore() {
         || c.movies.some(m => m.title.toLowerCase().includes(q))
       )
     })
+    if (minRating.value > 0)
+      list = list.filter(c => c.overall != null && c.overall >= minRating.value)
     if (sortByDistance.value && userLocation.value) {
       const origin = userLocation.value
       list = [...list].sort((a, b) => haversineKm(origin, a) - haversineKm(origin, b))
@@ -157,7 +160,7 @@ export function useCinemaStore() {
   }
 
   return {
-    city, cities: CITIES, search, selectedCinemaId, userLocation, sortByDistance, locating,
+    city, cities: CITIES, search, minRating, selectedCinemaId, userLocation, sortByDistance, locating,
     showContribute, contributeTarget, authModalOpen, cinemas, filteredCinemas, activeCinema,
     meta, pending, error, setCity, selectCinema, distanceTo, requestLocation,
     openContribute, closeContribute, openAuthModal, closeAuthModal, submitContribution,

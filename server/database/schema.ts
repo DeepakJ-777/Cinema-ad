@@ -87,7 +87,7 @@ export const adReports = sqliteTable('ad_reports', {
   showId: text('show_id').notNull().references(() => shows.id),
   adDurationMinutes: integer('ad_duration_minutes').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-}, (t) => [uniqueIndex('ad_reports_user_show_uq').on(t.userId, t.showId)])
+}, (t) => [uniqueIndex('ad_reports_user_show_uq').on(t.userId, t.showId), index('ad_reports_show_idx').on(t.showId)])
 
 export const ratings = sqliteTable('ratings', {
   id: text('id').primaryKey(),
@@ -103,4 +103,4 @@ export const ratings = sqliteTable('ratings', {
   valueForMoney: real('value_for_money'),
   review: text('review'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-}, (t) => [uniqueIndex('ratings_user_cinema_uq').on(t.userId, t.cinemaId)])
+}, (t) => [uniqueIndex('ratings_user_cinema_uq').on(t.userId, t.cinemaId), index('ratings_cinema_idx').on(t.cinemaId)])

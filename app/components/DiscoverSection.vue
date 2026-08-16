@@ -3,6 +3,7 @@ const {
   city,
   cities,
   search,
+  minRating,
   filteredCinemas,
   activeCinema,
   userLocation,
@@ -37,6 +38,19 @@ const {
             {{ locating ? 'Locating…' : sortByDistance ? '✓ Nearest first' : '📡 Near me' }}
           </button>
           <span class="font-mono text-xs text-mist">{{ filteredCinemas.length }} cinemas</span>
+          <label class="flex items-center gap-1.5 font-mono text-xs text-mist">
+            <span class="hidden sm:inline">Min</span>
+            <select
+              v-model.number="minRating"
+              class="rounded-full border border-reel bg-bg-alt px-2 py-1 font-mono text-xs text-paper focus:border-marquee focus:outline-none"
+              aria-label="Filter by minimum rating"
+            >
+              <option :value="0">Any rating</option>
+              <option :value="3.5">3.5+</option>
+              <option :value="4">4.0+</option>
+              <option :value="4.5">4.5+</option>
+            </select>
+          </label>
         </div>
       </div>
 

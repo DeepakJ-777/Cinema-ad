@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { createError, defineEventHandler, readBody, toWebRequest } from 'h3'
 import { getAuth } from '../utils/auth'
 import { getDb } from '../utils/db'
+import { allowRequest } from '../utils/rate-limit'
 import { ratings } from '../database/schema'
 
 const FIELDS = ['overall', 'ambience', 'staff', 'movieExperience', 'foodBeverages', 'valueForMoney'] as const
@@ -21,6 +22,8 @@ export default defineEventHandler(async (event) => {
   const auth = await getAuth(event)
   const session = await auth.api.getSession({ headers: toWebRequest(event).headers })
   if (!session?.user) throw createError({ statusCode: 401, statusMessage: 'Sign in to contribute' })
+  if (!allowRequest(`rt:${session.user.id}`))
+    throw createError({ statusCode: 429, statusMessage: 'Too many ratings — try again in a minute' })
 
   const db = await getDb(event)
   const cinema = (await db.all(sql`SELECT id FROM cinemas WHERE id = ${cinemaId}`))[0]
