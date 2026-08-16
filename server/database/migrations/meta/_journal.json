@@ -15,6 +15,13 @@
       "when": 1786867358574,
       "tag": "0001_lovely_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786877766309,
+      "tag": "0002_familiar_sabretooth",
+      "breakpoints": true
     }
   ]
 }

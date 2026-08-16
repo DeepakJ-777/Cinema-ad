@@ -6,9 +6,12 @@ const r1 = (v: number) => Math.round(v * 10) / 10
 
 export default defineEventHandler(async (event) => {
   const db = await getDb(event)
-  const city = String(getQuery(event).city || 'kochi')
+  // 'all' (default) loads every city so the client can consider cinemas near the
+  // user across city boundaries; an explicit city still filters server-side.
+  const cityParam = String(getQuery(event).city || 'all')
+  const cityFilter = cityParam === 'all' ? sql`` : sql`WHERE city = ${cityParam}`
 
-  const cinemas = (await db.all(sql`SELECT id, name, address, city, latitude AS lat, longitude AS lng FROM cinemas WHERE city = ${city} ORDER BY name`)) as any[]
+  const cinemas = (await db.all(sql`SELECT id, name, address, city, latitude AS lat, longitude AS lng FROM cinemas ${cityFilter} ORDER BY city, name`)) as any[]
   if (!cinemas.length) return { cinemas: [], meta: { adReports: 0, ratings: 0, contributors: 0 } }
   const idList = sql.join(cinemas.map(c => sql`${c.id}` as any), sql`, `)
 

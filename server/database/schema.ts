@@ -47,6 +47,14 @@ export const verifications = sqliteTable('verifications', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 })
 
+// --- Near-me discovery cache: one Overpass sweep per geohash cell per TTL ---
+export const discoveryCache = sqliteTable('discovery_cache', {
+  geohash: text('geohash').primaryKey(),
+  lat: real('lat').notNull(),
+  lng: real('lng').notNull(),
+  checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
+})
+
 // --- Domain tables (per project brief) ---
 export const cinemas = sqliteTable('cinemas', {
   id: text('id').primaryKey(),

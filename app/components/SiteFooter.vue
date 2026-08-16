@@ -8,13 +8,14 @@
               CINEMA<span class="text-marquee">·</span>COMMUNITY
             </p>
             <p class="mt-2 text-xs leading-relaxed text-mist">
-              Community-powered cinema experience — showtimes, crowd-reported ad durations and honest
-              theatre ratings. Prototype with seeded demo data.
+              Real movie start times for cinemas in Kochi &amp; Bengaluru — showtimes plus crowd-reported
+              pre-show lengths and honest theatre ratings. Prototype with seeded demo data.
             </p>
           </div>
           <div class="font-mono text-[11px] leading-relaxed text-mist/80">
             <p class="uppercase tracking-widest text-mist">Credits</p>
             <p class="mt-2">Map data © OpenStreetMap contributors</p>
+            <p>Cinema locations near you © OpenStreetMap contributors (ODbL, via Overpass)</p>
             <p>Dark tiles © CARTO · Mapping by Leaflet</p>
             <p>Built with Nuxt 4 + Tailwind CSS</p>
             <p class="mt-2 text-mist/60">Free accounts · contributing keeps the crowd data honest</p>

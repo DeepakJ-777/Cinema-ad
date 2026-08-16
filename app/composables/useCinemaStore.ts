@@ -1,6 +1,5 @@
 import { computed } from 'vue'
 import type { Cinema, CityId, Movie, Showtime } from '~/types'
-import { CITIES } from '~/utils/cities'
 import { haversineKm } from '~/utils/geo'
 
 export interface ContributeTarget {
@@ -29,10 +28,14 @@ interface Payload {
 }
 
 export function useCinemaStore() {
-  const city = useState<CityId>('cc:city', () => 'kochi')
+  // 'all' default — no city restriction. The selector is a *browsing* filter;
+  // Near Me is purely geographic and ignores it entirely.
+  const city = useState<'all' | CityId>('cc:city', () => 'all')
   const selectedCinemaId = useState<string | null>('cc:sel', () => null)
   const search = useState('cc:search', () => '')
   const minRating = useState('cc:min-rating', () => 0)
+  // Near-me lookup radius (km) — server-configurable, mirrored from the API response
+  const nearRadiusKm = useState('cc:near-radius', () => 25)
   const userLocation = useState<{ lat: number; lng: number } | null>('cc:loc', () => null)
   const sortByDistance = useState('cc:near', () => false)
   const locating = useState('cc:locating', () => false)
@@ -43,39 +46,67 @@ export function useCinemaStore() {
 
   const { data, pending, error, refresh } = useFetch<Payload>('/api/cinemas', {
     key: 'cc-cinemas',
-    query: { city },
+    // Load every city at once — "near me" can then consider cinemas across city
+    // boundaries instead of only the active city toggle.
+    query: { city: 'all' },
     default: () => ({ cinemas: [], meta: { adReports: 0, ratings: 0, contributors: 0 } }),
   })
 
   const cinemas = computed(() => data.value?.cinemas ?? [])
   const meta = computed(() => data.value?.meta ?? { adReports: 0, ratings: 0, contributors: 0 })
 
-  const filteredCinemas = computed(() => {
+  const matchesTextRating = (c: Cinema) => {
     const q = search.value.trim().toLowerCase()
-    let list = cinemas.value.filter((c) => {
-      if (!q) return true
-      return (
-        c.name.toLowerCase().includes(q)
+    if (q) {
+      const hit = c.name.toLowerCase().includes(q)
         || c.address.toLowerCase().includes(q)
         || c.movies.some(m => m.title.toLowerCase().includes(q))
-      )
-    })
-    if (minRating.value > 0)
-      list = list.filter(c => c.overall != null && c.overall >= minRating.value)
-    if (sortByDistance.value && userLocation.value) {
-      const origin = userLocation.value
-      list = [...list].sort((a, b) => haversineKm(origin, a) - haversineKm(origin, b))
+      if (!hit) return false
+    }
+    if (minRating.value > 0 && (c.overall == null || c.overall < minRating.value)) return false
+    return true
+  }
+
+  /** True while the list is driven by the user's live location. */
+  const nearMode = computed(() => sortByDistance.value && userLocation.value != null)
+
+  const filteredCinemas = computed(() => {
+    const base = cinemas.value.filter(matchesTextRating)
+    if (nearMode.value) {
+      const origin = userLocation.value!
+      const dist = (c: Cinema) => haversineKm(origin, c)
+      const sorted = [...base].sort((a, b) => dist(a) - dist(b))
+      // Near Me is geographic only: cinemas within the radius, nearest first.
+      // The two nearest are always kept so far-away users still see something.
+      const nearby = sorted.filter(c => dist(c) <= nearRadiusKm.value)
+      for (const c of sorted) {
+        if (nearby.length >= 2) break
+        if (!nearby.includes(c)) nearby.push(c)
+      }
+      return nearby
+    }
+    // Browse mode: city selector filters the list ('all' shows everything)
+    let list = city.value === 'all' ? base : base.filter(c => c.city === city.value)
+    if (city.value === 'all') {
+      // Cinemas with community data first; bare OSM locations follow
+      list = [...list].sort((a, b) => (b.movies.length > 0 ? 1 : 0) - (a.movies.length > 0 ? 1 : 0))
     }
     return list
   })
 
   const activeCinema = computed(
-    () => cinemas.value.find(c => c.id === selectedCinemaId.value) ?? cinemas.value[0] ?? null,
+    () => cinemas.value.find(c => c.id === selectedCinemaId.value)
+      ?? (nearMode.value
+          ? filteredCinemas.value[0]
+          : filteredCinemas.value.find(c => c.movies.length > 0) ?? filteredCinemas.value[0])
+      ?? null,
   )
 
-  function setCity(id: CityId) {
+  /** Browsing a predefined city — mutually exclusive with Near Me. */
+  function setCity(id: 'all' | CityId) {
     city.value = id
     selectedCinemaId.value = null
+    if (id !== 'all') sortByDistance.value = false // explicit browse → leave near-me mode
   }
 
   function selectCinema(id: string, opts?: { scroll?: boolean }) {
@@ -105,11 +136,34 @@ export function useCinemaStore() {
     if (locating.value) return
     locating.value = true
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
         sortByDistance.value = true
+        city.value = 'all' // near-me is geographic; clear the browse filter
+        // Discover → save to D1 → reuse: the endpoint only hits Overpass when
+        // this area has not been swept recently; repeat presses serve from D1.
+        let added = 0
+        let nearbyCount: number | null = null
+        try {
+          const res = await $fetch<{ added?: number, nearbyCount?: number, radiusKm?: number }>(
+            '/api/cinemas/near',
+            { query: { lat: userLocation.value.lat, lng: userLocation.value.lng } },
+          )
+          added = res.added ?? 0
+          nearbyCount = res.nearbyCount ?? null
+          if (res.radiusKm) nearRadiusKm.value = res.radiusKm
+          if (added > 0) await refresh()
+        }
+        catch {
+          // Overpass/DB hiccup — distance sorting over known cinemas still works
+        }
         locating.value = false
-        toast.push('📡 Sorted by distance from you')
+        if (nearbyCount === 0)
+          toast.push(`📡 No cinemas within ${nearRadiusKm.value} km yet — showing the nearest ones`)
+        else if (added > 0)
+          toast.push(`📡 ${added} cinemas near you added — sorted by distance`)
+        else
+          toast.push('📡 Sorted by distance from you')
       },
       () => {
         locating.value = false
@@ -150,7 +204,7 @@ export function useCinemaStore() {
         await $fetch('/api/ratings', { method: 'POST', body: input })
       }
       await refresh()
-      toast.push('🎉 Thanks! Community aggregates updated live.')
+      toast.push(' Thanks! Start-time estimates updated live.')
       return true
     }
     catch (e: any) {
@@ -160,9 +214,10 @@ export function useCinemaStore() {
   }
 
   return {
-    city, cities: CITIES, search, minRating, selectedCinemaId, userLocation, sortByDistance, locating,
+    city, setCity, search, minRating, nearRadiusKm, selectedCinemaId, userLocation, sortByDistance,
+    locating, nearMode,
     showContribute, contributeTarget, authModalOpen, cinemas, filteredCinemas, activeCinema,
-    meta, pending, error, setCity, selectCinema, distanceTo, requestLocation,
+    meta, pending, error, selectCinema, distanceTo, requestLocation,
     openContribute, closeContribute, openAuthModal, closeAuthModal, submitContribution,
     refreshCinemas: refresh,
   }

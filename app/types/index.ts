@@ -45,7 +45,7 @@ export interface Cinema {
   id: string
   name: string
   address: string
-  city: CityId
+  city: string
   lat: number
   lng: number
   overall: number | null

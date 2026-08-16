@@ -14,15 +14,15 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'en' },
-      title: 'Cinema Community — Community-Powered Cinema Experience',
+      title: 'Know When Your Movie Actually Starts — Cinema Community',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
           name: 'description',
           content:
-            'Crowd-sourced ad durations, showtimes and honest audience ratings for cinemas in Kochi & Bengaluru. Know exactly when to walk in.',
+            'See when the movie really begins: estimated actual start times from listed showtimes and real moviegoer pre-show reports, for cinemas in Kochi & Bengaluru.',
         },
-        { name: 'theme-color', content: '#17111A' },
+        { name: 'theme-color', content: '#0E0E0E' },
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -30,7 +30,7 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap',
+          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
         },
       ],
     },

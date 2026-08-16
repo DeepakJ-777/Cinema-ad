@@ -1,21 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #17111A;
-  --color-bg-alt: #1F1720;
-  --color-bg-alt2: #241A26;
-  --color-curtain: #7A2036;
-  --color-curtain-bright: #9C2C44;
-  --color-marquee: #E8B54D;
-  --color-paper: #F3E9D8;
-  --color-ink: #241A1E;
-  --color-mist: #BBA8B4;
-  --color-sage: #8FAE8A;
-  --color-reel: #382832;
+  /* Editorial dashboard: near-black base, lifted panels, single lime accent */
+  --color-bg: #0E0E0E;
+  --color-bg-alt: #1A1A1A;
+  --color-bg-alt2: #1E1E1E;
+  --color-curtain: #C6F135;
+  --color-curtain-bright: #D9FF5C;
+  --color-marquee: #C6F135;
+  --color-paper: #FFFFFF;
+  --color-ink: #101010;
+  --color-mist: #9A9A9A;
+  --color-body: #C8C8C8;
+  --color-sage: #C6F135;
+  --color-reel: #262626;
 
-  --font-display: "Bebas Neue", "Oswald", "Arial Narrow", sans-serif;
-  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Display role: bold + tight tracking (weight hierarchy, not size hierarchy) */
+.font-display {
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 html {
@@ -24,6 +32,8 @@ html {
 
 body {
   background-color: var(--color-bg);
+  color: var(--color-body);
+  font-family: var(--font-body);
 }
 
 ::selection {
@@ -34,75 +44,37 @@ body {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+select:focus-visible {
   outline: 2px solid var(--color-marquee);
   outline-offset: 2px;
 }
 
-/* ---------------- Film-strip divider ---------------- */
+/* ---------------- Section divider (hairline) ---------------- */
 .film-strip {
-  height: 24px;
-  background-color: var(--color-reel);
-  background-image: radial-gradient(circle at center, var(--color-bg) 4px, transparent 4.8px);
-  background-size: 26px 100%;
-  background-repeat: repeat-x;
-  background-position: center;
-  opacity: 0.9;
+  height: 1px;
+  background-color: #222222;
 }
 
-/* ---------------- Marquee bulbs ---------------- */
-.bulb-row {
-  display: flex;
-  justify-content: space-between;
-}
-
-.bulb {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: var(--color-marquee);
-  box-shadow: 0 0 10px 1px rgb(232 181 77 / 0.55);
-  animation: bulb-flicker 3s linear infinite;
-  animation-delay: calc(var(--i, 0) * 0.21s);
-}
-
-.bulb:nth-child(3n) {
-  animation-duration: 3.7s;
-}
-
-@keyframes bulb-flicker {
-  0%, 100% { opacity: 1; }
-  7%  { opacity: 0.4; }
-  11% { opacity: 0.95; }
-  52% { opacity: 0.7; }
-  56% { opacity: 0.35; }
-  60% { opacity: 1; }
-}
-
-/* ---------------- Ticket stub ---------------- */
+/* ---------------- Cinema card (flat panel, hairline, lime active) ---------------- */
 .ticket {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 108px;
   border-radius: 12px;
-  border: 2px solid transparent;
-  background: linear-gradient(135deg, #f8f0e1 0%, var(--color-paper) 70%);
-  color: var(--color-ink);
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.35);
-  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  border: 1px solid #232323;
+  background: var(--color-bg-alt2);
+  color: var(--color-paper);
+  transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
 }
-
-.ticket:nth-child(odd)  { rotate: -0.35deg; }
-.ticket:nth-child(even) { rotate: 0.3deg; }
 
 .ticket:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
+  background: #202020;
 }
 
 .ticket.active {
   border-color: var(--color-marquee);
-  box-shadow: 0 0 0 3px rgb(232 181 77 / 0.18), 0 10px 24px rgb(0 0 0 / 0.45);
 }
 
 .ticket-main {
@@ -112,7 +84,7 @@ textarea:focus-visible {
 
 .ticket-stub {
   position: relative;
-  border-left: 2px dashed rgb(36 26 30 / 0.35);
+  border-left: 1px dashed #2E2E2E;
   padding: 12px 8px;
   display: flex;
   flex-direction: column;
@@ -124,15 +96,15 @@ textarea:focus-visible {
 
 .ticket-notch {
   position: absolute;
-  left: -9px;
+  left: -8.5px;
   width: 16px;
   height: 16px;
   border-radius: 999px;
   background: var(--color-bg-alt);
 }
 
-.ticket-notch.top    { top: -10px; }
-.ticket-notch.bottom { bottom: -10px; }
+.ticket-notch.top    { top: -9px; }
+.ticket-notch.bottom { bottom: -9px; }
 
 /* ---------------- Leaflet ---------------- */
 .leaflet-container {
@@ -157,7 +129,7 @@ textarea:focus-visible {
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   background: var(--color-marquee);
-  border: 2px solid #1c141f;
+  border: 2px solid #0E0E0E;
   box-shadow: 0 3px 8px rgb(0 0 0 / 0.55);
   transition: transform 0.15s ease, background-color 0.15s ease;
 }
@@ -167,7 +139,7 @@ textarea:focus-visible {
   position: absolute;
   inset: 5px;
   border-radius: 999px;
-  background: #1c141f;
+  background: #0E0E0E;
 }
 
 .leaflet-marker-icon:hover .cine-pin {
@@ -177,7 +149,17 @@ textarea:focus-visible {
 .cine-pin.active {
   background: var(--color-curtain-bright);
   transform: rotate(-45deg) scale(1.25);
-  box-shadow: 0 0 0 4px rgb(156 44 68 / 0.3), 0 3px 10px rgb(0 0 0 / 0.6);
+  box-shadow: 0 0 0 4px rgb(198 241 53 / 0.25), 0 3px 10px rgb(0 0 0 / 0.6);
+}
+
+/* Cinemas discovered via OpenStreetMap — real location, no community data yet */
+.cine-pin.bare {
+  background: #6B6B6B;
+}
+
+.cine-pin.bare.active {
+  background: #8F8F8F;
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.12), 0 3px 10px rgb(0 0 0 / 0.6);
 }
 
 .me-pin {
@@ -185,15 +167,15 @@ textarea:focus-visible {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: var(--color-sage);
-  border: 2px solid #17111a;
+  background: var(--color-marquee);
+  border: 2px solid #0E0E0E;
   animation: me-pulse 2.2s ease-out infinite;
 }
 
 @keyframes me-pulse {
-  0%   { box-shadow: 0 0 0 0 rgb(143 174 138 / 0.5); }
-  70%  { box-shadow: 0 0 0 14px rgb(143 174 138 / 0); }
-  100% { box-shadow: 0 0 0 0 rgb(143 174 138 / 0); }
+  0%   { box-shadow: 0 0 0 0 rgb(198 241 53 / 0.45); }
+  70%  { box-shadow: 0 0 0 14px rgb(198 241 53 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(198 241 53 / 0); }
 }
 
 .leaflet-tooltip.cine-tip {
@@ -212,7 +194,7 @@ textarea:focus-visible {
 }
 
 .leaflet-control-attribution {
-  background: rgb(23 17 26 / 0.75) !important;
+  background: rgb(14 14 14 / 0.75) !important;
   color: var(--color-mist);
   font-size: 10px;
 }
@@ -228,7 +210,7 @@ textarea:focus-visible {
 }
 
 .leaflet-bar a:hover {
-  background: var(--color-reel);
+  background: #262626;
   color: var(--color-marquee);
 }
 
@@ -244,7 +226,7 @@ textarea:focus-visible {
 /* ---------------- Scrollbars ---------------- */
 .scroll-slim {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-reel) transparent;
+  scrollbar-color: #2E2E2E transparent;
 }
 
 .scroll-slim::-webkit-scrollbar {
@@ -256,12 +238,12 @@ textarea:focus-visible {
 }
 
 .scroll-slim::-webkit-scrollbar-thumb {
-  background: var(--color-reel);
+  background: #2E2E2E;
   border-radius: 8px;
 }
 
 .scroll-slim::-webkit-scrollbar-thumb:hover {
-  background: var(--color-curtain);
+  background: #3A3A3A;
 }
 
 /* ---------------- Modal / toast transitions ---------------- */
@@ -303,7 +285,6 @@ textarea:focus-visible {
     scroll-behavior: auto;
   }
 
-  .bulb,
   .me-pin {
     animation: none;
   }

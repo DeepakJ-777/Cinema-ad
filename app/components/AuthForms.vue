@@ -21,20 +21,20 @@ async function submit() {
 
 <template>
   <div class="mx-auto w-full max-w-sm">
-    <div class="flex justify-center gap-1 font-mono text-[11px] uppercase tracking-widest">
-      <button :class="['rounded-full px-3 py-1', mode === 'signin' ? 'bg-ink text-paper' : 'text-ink/60']" @click="mode = 'signin'">Sign in</button>
-      <button :class="['rounded-full px-3 py-1', mode === 'signup' ? 'bg-ink text-paper' : 'text-ink/60']" @click="mode = 'signup'">Create account</button>
+    <div class="flex justify-center gap-1 text-[11px] font-semibold uppercase tracking-widest">
+      <button :class="['rounded-full px-3.5 py-1.5', mode === 'signin' ? 'bg-marquee text-ink' : 'text-mist hover:text-paper']" @click="mode = 'signin'">Sign in</button>
+      <button :class="['rounded-full px-3.5 py-1.5', mode === 'signup' ? 'bg-marquee text-ink' : 'text-mist hover:text-paper']" @click="mode = 'signup'">Create account</button>
     </div>
-    <form class="mt-4 space-y-3" @submit.prevent="submit">
+    <form class="mt-5 space-y-3" @submit.prevent="submit">
       <input v-if="mode === 'signup'" v-model="name" required placeholder="Your name"
-        class="w-full rounded-lg border border-ink/25 bg-white/60 px-3 py-2 text-sm focus:border-curtain focus:outline-none" />
+        class="w-full rounded-lg border border-reel bg-bg-alt2 px-3 py-2 text-sm text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none" />
       <input v-model="email" type="email" required placeholder="Email"
-        class="w-full rounded-lg border border-ink/25 bg-white/60 px-3 py-2 text-sm focus:border-curtain focus:outline-none" />
+        class="w-full rounded-lg border border-reel bg-bg-alt2 px-3 py-2 text-sm text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none" />
       <input v-model="password" type="password" required minlength="8" placeholder="Password (8+ characters)"
-        class="w-full rounded-lg border border-ink/25 bg-white/60 px-3 py-2 text-sm focus:border-curtain focus:outline-none" />
-      <p v-if="errorMsg" class="font-mono text-xs text-curtain-bright">{{ errorMsg }}</p>
+        class="w-full rounded-lg border border-reel bg-bg-alt2 px-3 py-2 text-sm text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none" />
+      <p v-if="errorMsg" class="text-xs font-medium text-marquee">{{ errorMsg }}</p>
       <button type="submit" :disabled="busy"
-        class="btn-press w-full rounded-full bg-marquee py-2.5 text-sm font-bold text-ink hover:bg-ink hover:text-paper disabled:opacity-50">
+        class="btn-press w-full rounded-lg bg-marquee py-2.5 text-sm font-semibold text-ink hover:bg-curtain-bright disabled:opacity-50">
         {{ busy ? '…' : mode === 'signin' ? 'Sign in' : 'Create account' }}
       </button>
     </form>
