@@ -1,0 +1,39 @@
+{
+  "name": "cinema-community",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "deploy": "npm run build && npm run db:migrate:remote && npm run seed:remote && wrangler deploy",
+    "preview:worker": "wrangler dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxi typecheck",
+    "db:generate": "drizzle-kit generate",
+    "seed:generate": "node scripts/generate-seeds.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply cinema-community --local",
+    "db:migrate:remote": "wrangler d1 migrations apply cinema-community --remote",
+    "seed:local": "wrangler d1 execute cinema-community --local --file server/database/seed.sql",
+    "seed:remote": "wrangler d1 execute cinema-community --remote --file server/database/seed.sql"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "better-auth": "^1.6.29",
+    "drizzle-orm": "^0.45.2",
+    "leaflet": "^1.9.4",
+    "nuxt": "^4.0.0",
+    "vue": "^3.5.17",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/leaflet": "^1.9.12",
+    "drizzle-kit": "^0.31.10",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.6.3",
+    "vue-tsc": "^3.3.10",
+    "wrangler": "^4.123.0"
+  }
+}
