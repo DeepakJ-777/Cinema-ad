@@ -19,6 +19,7 @@
 
 import { BookMyShowProvider } from './bms'
 import { DistrictProvider } from './district'
+import { syncDistrictLocation } from './district-sync'
 import { writeLocationShows, type D1Database } from './d1'
 import { FixtureBookMyShowProvider } from './fixture'
 import type { FetchBudget } from './http'
@@ -160,7 +161,11 @@ export default {
       return json({
         worker: 'cinema-showtime-sync',
         cron: '0 6 * * * (daily 06:00 UTC = 11:30 IST)',
-        endpoints: { '/run?token=…': 'run the sync now (requires SYNC_TOKEN)', '/healthz': 'liveness' },
+        endpoints: {
+          '/run?token=…': 'run the sync now (requires SYNC_TOKEN)',
+          '/run?token=…&location=slug': 'sync ONE location via the production District path (syncDistrictLocation); optional &date=YYYY-MM-DD',
+          '/healthz': 'liveness',
+        },
         provider: buildProvider(env).id,
         policy: 'one attempt per URL, honest UA, stops on any block, stores only normalized data',
       })
@@ -169,6 +174,20 @@ export default {
     if (url.pathname === '/run') {
       if (!env.SYNC_TOKEN) return json({ error: 'SYNC_TOKEN not configured — manual trigger disabled' }, 503)
       if (url.searchParams.get('token') !== env.SYNC_TOKEN) return json({ error: 'invalid token' }, 401)
+      // STEP 3: single-location production sync (syncDistrictLocation). The
+      // cron is NOT wired to this yet — /run without ?location keeps the
+      // legacy multi-location behavior untouched.
+      const location = url.searchParams.get('location')
+      if (location) {
+        const date = url.searchParams.get('date') ?? undefined
+        try {
+          const report = await syncDistrictLocation(env.DB, location, date ? { date } : {})
+          return json({ ok: report.status === 'ok', trigger: `manual:location:${location}`, report })
+        }
+        catch (e: any) {
+          return json({ ok: false, trigger: `manual:location:${location}`, error: e?.message ?? String(e) }, 500)
+        }
+      }
       return json(await runSync(env, 'manual'))
     }
 
