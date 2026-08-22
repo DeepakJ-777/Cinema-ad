@@ -143,11 +143,72 @@ async function runSync(env: Env, trigger: string): Promise<SyncSummary> {
   return summary
 }
 
+// ------------------------------------------------------------- STEP 4A cron
+// The daily cron drives the PROVEN single-location District path
+// (syncDistrictLocation) for the rollout list below — Kochi first (STEP 4A).
+// Other enabled sync_locations rows are skipped with a clear log until STEP 4B
+// generalizes this. The legacy provider loop (runSync above) stays on /run
+// (no ?location=) so the existing e2e keeps running unchanged.
+const CRON_DISTRICT_LOCATIONS: ReadonlySet<string> = new Set(['kochi'])
+
+interface CronSyncSummary {
+  startedAt: string
+  trigger: string
+  path: 'district-sync'
+  locations: { slug: string, status: string, detail?: unknown }[]
+  stoppedEarly?: string
+}
+
+/** Cron orchestration: enabled sync_locations ∩ rollout list → syncDistrictLocation. */
+async function runCronDistrictSync(env: Env, trigger: string): Promise<CronSyncSummary> {
+  const summary: CronSyncSummary = {
+    startedAt: new Date().toISOString(),
+    trigger,
+    path: 'district-sync',
+    locations: [],
+  }
+  console.log(`[cron] run start (trigger=${trigger}, path=district-sync, rollout=[${[...CRON_DISTRICT_LOCATIONS].join(', ')}])`)
+
+  let rows: SyncLocationRow[] = []
+  try {
+    const r = await env.DB.prepare('SELECT slug, name, region_code FROM sync_locations WHERE enabled = 1 ORDER BY slug').all<SyncLocationRow>()
+    rows = r.results ?? []
+  }
+  catch (e: any) {
+    summary.stoppedEarly = `sync_locations read failed: ${e?.message ?? e} — apply migrations first (npm run sync:migrate:local)`
+    console.log(`[cron] STOPPED: ${summary.stoppedEarly}`)
+    return summary
+  }
+  console.log(`[cron] ${rows.length} enabled location(s): ${rows.map(l => l.slug).join(', ') || '(none)'}`)
+
+  for (const loc of rows) {
+    if (!CRON_DISTRICT_LOCATIONS.has(loc.slug)) {
+      console.log(`[cron] ${loc.slug}: SKIP — enabled in sync_locations but not on the cron District path yet (STEP 4B)`)
+      summary.locations.push({ slug: loc.slug, status: 'skipped' })
+      continue
+    }
+    try {
+      const report = await syncDistrictLocation(env.DB, loc.slug)
+      console.log(`[cron] ${loc.slug}: ${report.status.toUpperCase()} — matched=${report.matched.length} unmatched=${report.unmatched.length} fetchFailed=${report.fetchFailed.length} movies +${report.moviesInserted}/${report.moviesUpdated} shows +${report.showsInserted}/${report.showsUpdated} staleDeleted=${report.staleDeleted}`)
+      summary.locations.push({ slug: loc.slug, status: report.status, detail: report })
+    }
+    catch (e) {
+      // District refused/blocked → log the exact reason and stop the run (policy).
+      summary.stoppedEarly = `${loc.slug}: ${e instanceof Error ? e.message : String(e)}`
+      console.log(`[cron] ${loc.slug}: ERROR — ${summary.stoppedEarly} — stopping per policy; no bypass attempted`)
+      summary.locations.push({ slug: loc.slug, status: 'error', detail: summary.stoppedEarly })
+      return summary
+    }
+  }
+  console.log(`[cron] run complete — ${summary.locations.length} location(s) processed`)
+  return summary
+}
+
 // ------------------------------------------------------------ worker entry
 
 export default {
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runSync(env, `cron:${controller.cron}`))
+    ctx.waitUntil(runCronDistrictSync(env, `cron:${controller.cron}`))
   },
 
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -160,7 +221,7 @@ export default {
     if (url.pathname === '/') {
       return json({
         worker: 'cinema-showtime-sync',
-        cron: '0 6 * * * (daily 06:00 UTC = 11:30 IST)',
+        cron: '0 6 * * * (daily 06:00 UTC = 11:30 IST) — drives syncDistrictLocation for the rollout list (kochi; STEP 4A)',
         endpoints: {
           '/run?token=…': 'run the sync now (requires SYNC_TOKEN)',
           '/run?token=…&location=slug': 'sync ONE location via the production District path (syncDistrictLocation); optional &date=YYYY-MM-DD',

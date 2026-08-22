@@ -8,23 +8,34 @@ that syncs cinema showtimes into the shared D1 database through a
 
 ```
 ShowtimeProvider (interface)          sync-worker/src/provider.ts
-      └── DistrictProvider            src/district.ts   (LIVE — default)
+      └── DistrictProvider            src/district.ts   (LIVE — legacy loop)
       └── BookMyShowProvider          src/bms.ts        (kept; blocked upstream, USE_BMS=1)
       └── FixtureBookMyShowProvider   src/fixture.ts    (DEV ONLY, USE_FIXTURE=1)
 
-index.ts    cron orchestration: sync_locations → known D1 cinemas → provider → D1 → logs
-district.ts the only module that knows District (Zomato) URLs/page shapes
-bms.ts      the only module that knows BookMyShow URLs/params
-normalize.ts  BMS JSON → our model (defensive, no raw JSON stored)
-d1.ts       upserts + cinema matching + per-cinema stale cleanup (raw D1 SQL)
-http.ts     polite fetch: 1 attempt/URL, honest UA, budget, block classifier
+index.ts        cron orchestration (STEP 4A): enabled sync_locations ∩ rollout
+                list CRON_DISTRICT_LOCATIONS (kochi) → syncDistrictLocation().
+                /run (no ?location=) keeps the legacy provider loop for the e2e.
+district-sync.ts production single-location District sync (STEP 3): directory
+                search → verified cinema matching → save-test upserts →
+                date-scoped stale cleanup (ad_reports preserved) → stamps.
+district.ts     the only module that knows District (Zomato) URLs/page shapes
+bms.ts          the only module that knows BookMyShow URLs/params
+normalize.ts    BMS JSON → our model (defensive, no raw JSON stored)
+d1.ts           legacy-loop upserts + cinema matching + per-cinema stale cleanup
+http.ts         polite fetch: 1 attempt/URL, honest UA, budget, block classifier
 ```
 
-Run flow per location: read enabled `sync_locations` → skip locations without
-`region_code` → load our D1 cinemas for the city (`knownVenues`) → provider
-sync → upsert movies/shows in D1 → attach shows to **matched** cinemas →
-delete stale shows **per refreshed cinema only**. Any provider block → log the
-exact reason and stop the run.
+Cron run flow (STEP 4A): `scheduled()` → `runCronDistrictSync()` → for each
+enabled `sync_locations` row in `CRON_DISTRICT_LOCATIONS` (kochi):
+`syncDistrictLocation()` → D1 + `sync_locations.last_synced_at`. Other enabled
+locations are skipped with a clear log until STEP 4B generalizes the rollout.
+Any District block/refusal → log the exact reason and stop the run.
+
+Legacy loop (still on `/run`): read enabled `sync_locations` → skip locations
+without `region_code` → load our D1 cinemas for the city (`knownVenues`) →
+provider sync → upsert movies/shows in D1 → attach shows to **matched** cinemas
+→ delete stale shows **per refreshed cinema only**. Any provider block → log
+the exact reason and stop the run.
 
 ## District provider (live)
 
@@ -111,6 +122,9 @@ npm run sync:migrate:local          # apply migrations to the worker's local D1
 cd sync-worker && npx wrangler d1 execute cinema-community --local --file ../server/database/seed.sql  # seed once
 npm run sync:dev                    # wrangler dev --test-scheduled (:8787)
 # /run?token=dev-local-only         (token from sync-worker/.dev.vars)
+# /run?token=dev-local-only&location=kochi   # one location via syncDistrictLocation
+node scripts/district-sync-kochi.mts      # STEP 3: 5-run Kochi suite (46 checks)
+node scripts/e2e-cron-kochi-test.mjs      # STEP 4A: REAL cron path via /__scheduled (24 checks)
 node scripts/e2e-district-test.mjs      # real District → local D1 (18 checks)
 node scripts/district-copy-to-dev.mjs   # copy synced rows into data/db.sqlite
 node scripts/e2e-district-frontend-test.mjs  # nuxt dev serves them (7 checks)
