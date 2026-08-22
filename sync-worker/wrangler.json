@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cinema-bms-sync",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-07-15",
+  "triggers": {
+    "crons": ["0 6 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cinema-community",
+      "database_id": "7c892759-48a1-494a-a36b-a304c992ecb5",
+      "migrations_dir": "../server/database/migrations"
+    }
+  ]
+}

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const cityParam = String(getQuery(event).city || 'all')
   const cityFilter = cityParam === 'all' ? sql`` : sql`WHERE city = ${cityParam}`
 
-  const cinemas = (await db.all(sql`SELECT id, name, address, city, latitude AS lat, longitude AS lng FROM cinemas ${cityFilter} ORDER BY city, name`)) as any[]
+  const cinemas = (await db.all(sql`SELECT id, name, address, city, latitude AS lat, longitude AS lng, last_synced_at AS syncedAt FROM cinemas ${cityFilter} ORDER BY city, name`)) as any[]
   if (!cinemas.length) return { cinemas: [], meta: { adReports: 0, ratings: 0, contributors: 0 } }
   const idList = sql.join(cinemas.map(c => sql`${c.id}` as any), sql`, `)
 
@@ -19,9 +19,10 @@ export default defineEventHandler(async (event) => {
   const movieMap = new Map(movies.map(m => [m.id, m]))
 
   const showsQ = (today: boolean) => db.all(sql`
-    SELECT s.id, s.cinema_id AS cinemaId, s.movie_id AS movieId, s.start_time AS startTime, s.format, s.screen
+    SELECT s.id, s.cinema_id AS cinemaId, s.movie_id AS movieId, s.start_time AS startTime, s.format, s.screen,
+           s.availability_status AS availability, s.show_date AS showDate
     FROM shows s
-    WHERE s.cinema_id IN (${idList}) ${today ? sql`AND s.show_date = date('now')` : sql``}
+    WHERE s.cinema_id IN (${idList}) ${today ? sql`AND s.show_date = date('now', '+330 minutes')` : sql``}
     ORDER BY s.start_time`)
   let shows = (await showsQ(true)) as any[]
   if (!shows.length) shows = (await showsQ(false)) as any[] // stale-seed fallback
@@ -69,6 +70,7 @@ export default defineEventHandler(async (event) => {
     const g = ratingRows.find(r => r.cinemaId === c.id)
     return {
       ...c,
+      syncedAt: c.syncedAt ? new Date(c.syncedAt * 1000).toISOString() : null,
       overall: g?.overall != null ? r1(g.overall) : null,
       ratingCount: g?.n ?? 0,
       ratings: g ? {
@@ -82,6 +84,7 @@ export default defineEventHandler(async (event) => {
           id: m.id, title: m.title, language: m.language, durationMin: m.durationMin, hue: m.hue, emoji: m.emoji,
           showtimes: sts.map(s => ({
             id: s.id, startTime: s.startTime, format: s.format, screen: s.screen,
+            availability: s.availability ?? null,
             adDurationMin: medianMap.get(s.id) != null ? r1(medianMap.get(s.id)) : null,
             adReports: countMap.get(s.id) ?? 0,
           })),

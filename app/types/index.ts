@@ -26,6 +26,8 @@ export interface Showtime {
   startTime: string
   format: string
   screen: string
+  /** Provider availability when the show was synced: 'available' | 'filling_fast' | 'sold_out' | … */
+  availability?: string | null
   /** Typical ad duration (minutes) for this show from community reports; null when unreported */
   adDurationMin: number | null
   adReports: number
@@ -48,6 +50,8 @@ export interface Cinema {
   city: string
   lat: number
   lng: number
+  /** ISO timestamp of the last successful showtime-provider sync covering this cinema (null = never synced) */
+  syncedAt?: string | null
   overall: number | null
   ratingCount: number
   ratings: RatingBreakdown | null

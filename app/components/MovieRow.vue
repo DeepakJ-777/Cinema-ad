@@ -18,6 +18,22 @@ const formats = computed(() =>
   [...new Set(props.movie.showtimes.map(s => s.format))].join(' · '),
 )
 
+/** Availability badge class for a showtime chip (provider data; subtle by design). */
+function availClass(a?: string | null): string {
+  if (!a) return ''
+  if (a === 'sold_out') return 'bg-mist/15 text-mist line-through decoration-mist/60'
+  if (a === 'filling_fast' || a === 'almost_full') return 'bg-amber-400/15 text-amber-300'
+  return ''
+}
+
+/** Provider availability status → short badge label. */
+function availLabel(a: string): string {
+  if (a === 'sold_out') return 'Sold out'
+  if (a === 'filling_fast') return 'Filling fast'
+  if (a === 'almost_full') return 'Almost full'
+  return a.replace(/_/g, ' ')
+}
+
 function toggle() {
   open.value = !open.value
   if (open.value && !selectedShowId.value) {
@@ -94,6 +110,12 @@ function report() {
               @click="selectedShowId = st.id"
             >
               {{ fmt12(st.startTime) }} <span class="opacity-60">{{ st.format }}</span>
+              <span
+                v-if="st.availability && st.availability !== 'available'"
+                :class="['ml-1 rounded px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide', availClass(st.availability)]"
+              >
+                {{ availLabel(st.availability) }}
+              </span>
             </button>
           </div>
 

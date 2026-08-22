@@ -14,6 +14,16 @@ const showsCount = computed(
   () => activeCinema.value?.movies.reduce((s, m) => s + m.showtimes.length, 0) ?? 0,
 )
 
+/** A showtime provider covered this cinema recently (within 36 h) — so an
+ *  empty movie list means the provider confirmed there are no shows today,
+ *  not that sync is missing/broken. */
+const providerConfirmed = computed(() => {
+  const c = activeCinema.value
+  if (!c?.syncedAt) return false
+  const age = Date.now() - Date.parse(c.syncedAt)
+  return Number.isFinite(age) && age >= 0 && age < 36 * 3600 * 1000
+})
+
 function rateCinema() {
   if (activeCinema.value) {
     openContribute({ cinema: activeCinema.value })
@@ -90,11 +100,20 @@ function rateCinema() {
           </div>
           <div class="mt-3 space-y-3">
             <p
-              v-if="!activeCinema.movies.length"
+              v-if="!activeCinema.movies.length && providerConfirmed"
               class="rounded-lg bg-bg-alt2 p-4 text-sm leading-relaxed text-mist"
             >
-              No showtimes listed yet for this cinema. Its location comes from OpenStreetMap —
-              showtimes and community reports arrive as moviegoers contribute them.
+              No shows today — our showtime provider currently lists no sessions at this
+              cinema. Check back tomorrow, or tap a show once it's listed to start the
+              ad-tracker countdown.
+            </p>
+            <p
+              v-else-if="!activeCinema.movies.length"
+              class="rounded-lg bg-bg-alt2 p-4 text-sm leading-relaxed text-mist"
+            >
+              Showtimes unavailable right now — this cinema's location comes from
+              OpenStreetMap and its showtimes arrive via our daily sync. Community reports
+              start counting down the ads as soon as a show is listed.
             </p>
             <MovieRow v-for="m in activeCinema.movies" :key="m.id" :movie="m" />
           </div>

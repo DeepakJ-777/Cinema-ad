@@ -231,6 +231,7 @@ export default defineEventHandler(async (event) => {
           city: (t['addr:city'] || t['addr:town'] || t['addr:state'] || '').slice(0, 60),
           latitude: elLat,
           longitude: elLng,
+          source: 'osm', // discovered via OpenStreetMap, not seed/provider data
         })
       }
       diag.parsedCandidates = candidates.length

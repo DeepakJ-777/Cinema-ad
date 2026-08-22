@@ -17,6 +17,10 @@
     "db:migrate:remote": "wrangler d1 migrations apply cinema-community --remote",
     "seed:local": "wrangler d1 execute cinema-community --local --file server/database/seed.sql",
     "seed:remote": "wrangler d1 execute cinema-community --remote --file server/database/seed.sql",
+    "sync:dev": "cd sync-worker && wrangler dev --test-scheduled",
+    "sync:migrate:local": "cd sync-worker && wrangler d1 migrations apply cinema-community --local",
+    "sync:migrate:remote": "cd sync-worker && wrangler d1 migrations apply cinema-community --remote",
+    "sync:deploy": "cd sync-worker && wrangler deploy",
     "test:smoke": "node scripts/smoke-test.mjs"
   },
   "dependencies": {

@@ -49,10 +49,20 @@ ok('both kochi and bengaluru included for near-me consideration', citySet.has('k
 const meta = g1.body.meta
 ok('meta includes contributors count', typeof meta.contributors === 'number' && meta.contributors > 0, JSON.stringify(meta))
 
+// Probe target: prefer a show that already carries community reports (seed /
+// stale-fallback mode). When live District shows for today exist, the API
+// serves those instead and seed shows with demo reports are absent — so fall
+// back to any Kochi show (live mode). Every later assertion works either way:
+// ad-report upsert counts from show.adReports, whatever it starts at.
 const cinema = g1.body.cinemas.find(c => c.movies.some(m => m.showtimes.some(s => s.adReports > 0)))
-const movie = cinema.movies.find(m => m.showtimes.some(s => s.adReports > 0))
-const show = movie.showtimes.find(s => s.adReports > 0)
-console.log(`   probe: ${cinema.name} · ${movie.title} · ${show.startTime} (${show.adReports} reports, ~${show.adDurationMin} min)`)
+  ?? g1.body.cinemas.find(c => c.movies.some(m => m.showtimes.length > 0))
+if (!cinema) {
+  console.log('✗ no Kochi cinema with any show in payload — cannot continue')
+  process.exit(1)
+}
+const movie = cinema.movies.find(m => m.showtimes.some(s => s.adReports > 0)) ?? cinema.movies.find(m => m.showtimes.length > 0)
+const show = movie.showtimes.find(s => s.adReports > 0) ?? movie.showtimes[0]
+console.log(`   probe: ${cinema.name} · ${movie.title} · ${show.startTime} (${show.adReports} reports${show.adDurationMin != null ? `, ~${show.adDurationMin} min` : ''})`)
 
 console.log('— near me: discover → save to D1 → reuse —')
 ok('invalid coords → 400', (await j('/api/cinemas/near?lat=999&lng=76')).status === 400)
@@ -99,7 +109,7 @@ const g2 = await j('/api/cinemas?city=kochi')
 const c2 = g2.body.cinemas.find(c => c.id === cinema.id)
 const s2 = c2.movies.flatMap(m => m.showtimes).find(s => s.id === show.id)
 ok('report count grew by exactly 1 after two submissions', s2.adReports === show.adReports + 1, `got ${s2.adReports}, want ${show.adReports + 1}`)
-ok('median is a sane positive number', s2.adDurationMin > 0 && s2.adDurationMin < 90, `got ${s2.adDurationMin}`)
+ok('median is a sane positive number', s2.adDurationMin != null && s2.adDurationMin > 0 && s2.adDurationMin < 90, `got ${s2.adDurationMin}`)
 
 console.log('— rating validation + upsert —')
 ok('rating 9 → 400 (out of 1–5)', (await post('/api/ratings', { cinemaId: cinema.id, overall: 9 }, cookie)).status === 400)
