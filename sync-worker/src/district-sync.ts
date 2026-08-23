@@ -183,6 +183,7 @@ interface CollectedShow {
   showDate: string
   showTime: string
   format?: string
+  screen?: string
   language?: string
   availability: string
 }
@@ -436,6 +437,7 @@ export async function syncDistrictLocation(
         showDate: s.showDate,
         showTime: s.showTime,
         format: s.format,
+        screen: s.screen,
         language: s.language,
         availability: s.availability,
       })
@@ -479,7 +481,7 @@ export async function syncDistrictLocation(
       const params: unknown[] = []
       const values = part.map((s) => {
         params.push(`district-${s.sessionId}`, s.cinemaRowId, `district-${s.movieId}`, s.showDate, s.showTime,
-          s.format ?? '', '', s.sessionId, null, `${s.showDate}T${s.showTime}`, s.availability, s.language ?? null, 'district', nowSec)
+          s.format ?? '', s.screen ?? '', s.sessionId, null, `${s.showDate}T${s.showTime}`, s.availability, s.language ?? null, 'district', nowSec)
         return '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       })
       await db.prepare(

@@ -7,7 +7,7 @@
  *   runCronDistrictSync: sync_locations ∩ rollout list
  *         ↓
  *   kochi → syncDistrictLocation() → District → D1
- *   bengaluru (enabled in sync_locations, NOT on the rollout list) → SKIP
+ *   bengaluru → syncDistrictLocation() → District → D1 (SYNCED since STEP 4B)
  *
  * Checks (each trigger):
  *   1. Worker log shows the cron orchestration lines (path=district-sync,
@@ -117,8 +117,7 @@ try {
 
   ok('orchestration log: path=district-sync', workerLog.some(l => l.includes('[cron] run start') && l.includes('path=district-sync')))
   ok('orchestration log: kochi OK line', workerLog.some(l => /\[cron\] kochi: OK — matched=\d+/.test(l)))
-  ok('orchestration log: bengaluru SKIP (rollout list gate)', workerLog.some(l => l.includes('[cron] bengaluru: SKIP')))
-  ok('bengaluru not synced by cron (log has no [cron] bengaluru: OK)', !workerLog.some(l => /\[cron\] bengaluru: (OK|ERROR)/.test(l)))
+  ok('orchestration log: bengaluru OK line (rollout includes bengaluru)', workerLog.some(l => /\[cron\] bengaluru: OK — matched=\d+/.test(l)))
 
   const locLsa1 = Number(d1(`SELECT last_synced_at AS lsa FROM sync_locations WHERE slug='kochi'`)[0]?.lsa ?? 0)
   const kochiMaxLsa1 = Number(d1(`SELECT MAX(last_synced_at) AS m FROM cinemas WHERE city='kochi'`)[0]?.m ?? 0)
@@ -133,13 +132,17 @@ try {
     shows: n1(`SELECT COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${blrIds})`),
     locLsa: d1(`SELECT last_synced_at AS lsa FROM sync_locations WHERE slug='bengaluru'`)[0]?.lsa,
   }
-  ok('bengaluru cinemas FROZEN (lsa unchanged)', blrAfter.maxLsa === snap.blrMaxLsa, `${snap.blrMaxLsa} → ${blrAfter.maxLsa}`)
-  ok('bengaluru shows FROZEN (count unchanged)', blrAfter.shows === snap.blrShows, `${snap.blrShows} → ${blrAfter.shows}`)
-  ok('bengaluru sync_locations still NULL', blrAfter.locLsa == null)
+  ok('bengaluru cinemas STAMPED (lsa bumped)', blrAfter.maxLsa > snap.blrMaxLsa, `${snap.blrMaxLsa} → ${blrAfter.maxLsa}`)
+  ok('bengaluru sync_locations.last_synced_at written', Number(blrAfter.locLsa) > 0, String(blrAfter.locLsa))
+  // Count identity from trigger 1's bengaluru OK log line (inserted/staleDeleted).
+  const blrOk1 = workerLog.find(l => /\[cron\] bengaluru: OK — /.test(l)) ?? ''
+  const blrM1 = blrOk1.match(/shows \+(\d+)\/(\d+) staleDeleted=(\d+)/)
+  ok('trigger 1 bengaluru count identity', !!blrM1 && blrAfter.shows === snap.blrShows + Number(blrM1[1]) - Number(blrM1[3]),
+    `${snap.blrShows} + ${blrM1?.[1]} − ${blrM1?.[3]} = ${blrAfter.shows}`)
 
   ok('no cinema rows created', n1(`SELECT COUNT(*) AS n FROM cinemas`) === snap.cinemas)
-  const dups = d1(`SELECT cinema_id, movie_id, show_date, start_time, COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${kochiIds}) GROUP BY cinema_id, movie_id, show_date, start_time HAVING n > 1`)
-  ok('no duplicate (cinema, movie, date, time) rows', dups.length === 0)
+  const dups = d1(`SELECT cinema_id, movie_id, show_date, start_time, screen, COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${kochiIds}) GROUP BY cinema_id, movie_id, show_date, start_time, screen HAVING n > 1`)
+  ok('no duplicate (cinema, movie, date, time, screen) rows', dups.length === 0)
   ok('every show id stored exactly once', n1(`SELECT COUNT(*) AS n FROM (SELECT id FROM shows WHERE source='district' AND cinema_id IN (${kochiIds}) GROUP BY id HAVING COUNT(*) > 1)`) === 0)
 
   console.log('\n=== CRON TRIGGER 2 (idempotency) ===')
@@ -162,12 +165,24 @@ try {
       `${after1} + ${ins2} − ${del2} = ${after2}`)
   }
   ok('still no duplicates after trigger 2',
-    d1(`SELECT cinema_id, movie_id, show_date, start_time, COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${kochiIds}) GROUP BY cinema_id, movie_id, show_date, start_time HAVING n > 1`).length === 0)
+    d1(`SELECT cinema_id, movie_id, show_date, start_time, screen, COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${kochiIds}) GROUP BY cinema_id, movie_id, show_date, start_time, screen HAVING n > 1`).length === 0)
   const blrFinalShows = n1(`SELECT COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${blrIds})`)
-  ok('bengaluru still FROZEN after trigger 2', blrFinalShows === snap.blrShows, `${snap.blrShows} → ${blrFinalShows}`)
+  const blrOkLines = workerLog.filter(l => /\[cron\] bengaluru: OK — /.test(l))
+  const blrShowsMatches = [...blrOkLines.join('\n').matchAll(/shows \+(\d+)\/(\d+) staleDeleted=(\d+)/g)]
+  ok('two bengaluru OK log lines parsed', blrShowsMatches.length >= 2, `n=${blrShowsMatches.length}`)
+  if (blrShowsMatches.length >= 2) {
+    const [, blrIns2, , blrDel2] = blrShowsMatches[1]
+    ok('bengaluru trigger 2 inserted 0 shows', blrIns2 === '0', `+${blrIns2}`)
+    ok('bengaluru count identity (trigger 2)', blrFinalShows === blrAfter.shows + Number(blrIns2) - Number(blrDel2),
+      `${blrAfter.shows} + ${blrIns2} − ${blrDel2} = ${blrFinalShows}`)
+  }
+  ok('bengaluru no duplicates',
+    d1(`SELECT cinema_id, movie_id, show_date, start_time, screen, COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${blrIds}) GROUP BY cinema_id, movie_id, show_date, start_time, screen HAVING n > 1`).length === 0)
 
-  console.log(`\n— kochi final state —`)
+  console.log(`\n— final state —`)
   for (const c of d1(`SELECT id, name, district_cinema_id AS dcd, last_synced_at AS lsa FROM cinemas WHERE city='kochi' ORDER BY id`))
+    console.log(`  ${c.id} ${c.name} — dcd=${c.dcd ?? 'NULL'} lsa=${c.lsa ?? 'NULL'}`)
+  for (const c of d1(`SELECT id, name, district_cinema_id AS dcd, last_synced_at AS lsa FROM cinemas WHERE city='bengaluru' ORDER BY id`))
     console.log(`  ${c.id} ${c.name} — dcd=${c.dcd ?? 'NULL'} lsa=${c.lsa ?? 'NULL'}`)
 }
 catch (e) {

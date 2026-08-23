@@ -145,11 +145,13 @@ async function runSync(env: Env, trigger: string): Promise<SyncSummary> {
 
 // ------------------------------------------------------------- STEP 4A cron
 // The daily cron drives the PROVEN single-location District path
-// (syncDistrictLocation) for the rollout list below — Kochi first (STEP 4A).
-// Other enabled sync_locations rows are skipped with a clear log until STEP 4B
-// generalizes this. The legacy provider loop (runSync above) stays on /run
-// (no ?location=) so the existing e2e keeps running unchanged.
-const CRON_DISTRICT_LOCATIONS: ReadonlySet<string> = new Set(['kochi'])
+// (syncDistrictLocation) for the rollout list below. Kochi first (STEP 4A);
+// Bengaluru joined after its own two-run verification through the same
+// function (STEP 4B: matched 5/6 cinemas via revalidated stored ids, Urvashi
+// correctly unmatched, 217 shows, second run 0 inserts/0 duplicates).
+// The legacy provider loop (runSync above) stays on /run (no ?location=)
+// so the existing e2e keeps running unchanged.
+const CRON_DISTRICT_LOCATIONS: ReadonlySet<string> = new Set(['kochi', 'bengaluru'])
 
 interface CronSyncSummary {
   startedAt: string
@@ -221,7 +223,7 @@ export default {
     if (url.pathname === '/') {
       return json({
         worker: 'cinema-showtime-sync',
-        cron: '0 6 * * * (daily 06:00 UTC = 11:30 IST) — drives syncDistrictLocation for the rollout list (kochi; STEP 4A)',
+        cron: '0 6 * * * (daily 06:00 UTC = 11:30 IST) — drives syncDistrictLocation for the rollout list (kochi, bengaluru)',
         endpoints: {
           '/run?token=…': 'run the sync now (requires SYNC_TOKEN)',
           '/run?token=…&location=slug': 'sync ONE location via the production District path (syncDistrictLocation); optional &date=YYYY-MM-DD',

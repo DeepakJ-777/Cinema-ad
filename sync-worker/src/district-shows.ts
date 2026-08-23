@@ -33,6 +33,10 @@ export interface DistrictShow {
   sessionId: string
   language?: string
   format?: string
+  /** Audi label as published (e.g. 'AUDI 2 4DX', 'SCREEN 5') — may be absent.
+   *  The only field that distinguishes two simultaneous screenings of the
+   *  same movie at a multiplex. */
+  screen?: string
   availability: string // available | filling_fast | almost_full | sold_out | unknown
   source: 'district'
 }
@@ -170,6 +174,7 @@ export async function getDistrictCinemaShows(
         sessionId,
         language: str(s?.lang),
         format: str(s?.scrnFmt),
+        screen: str(s?.audi),
         availability: normalizeAvailability(s ?? {}),
         source: 'district',
       })

@@ -179,8 +179,8 @@ try {
   const after2 = kochiDistrictShows()
   ok('RUN 2 count identity (no churn)', after2 === after1 + run2.showsInserted - run2.staleDeleted,
     `${after1} + ${run2.showsInserted} − ${run2.staleDeleted} = ${after2}`)
-  const dups = d1(`SELECT cinema_id, movie_id, show_date, start_time, COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${kochiIds}) GROUP BY cinema_id, movie_id, show_date, start_time HAVING n > 1`)
-  ok('no duplicate (cinema, movie, date, time) rows', dups.length === 0, JSON.stringify(dups.slice(0, 2)))
+  const dups = d1(`SELECT cinema_id, movie_id, show_date, start_time, screen, COUNT(*) AS n FROM shows WHERE source='district' AND cinema_id IN (${kochiIds}) GROUP BY cinema_id, movie_id, show_date, start_time, screen HAVING n > 1`)
+  ok('no duplicate (cinema, movie, date, time, screen) rows', dups.length === 0, JSON.stringify(dups.slice(0, 2)))
   const idDups = n1(`SELECT COUNT(*) AS n FROM (SELECT id FROM shows WHERE source='district' AND cinema_id IN (${kochiIds}) GROUP BY id HAVING COUNT(*) > 1)`)
   ok('every show id stored exactly once', idDups === 0)
 
