@@ -5,6 +5,7 @@ import { CITIES } from '~/utils/cities'
 const {
   cinemas,
   city,
+  setCity,
   search,
   minRating,
   nearRadiusKm,
@@ -18,6 +19,11 @@ const {
   requestLocation,
   distanceTo,
 } = useCinemaStore()
+
+const cityOptions = [
+  { id: 'all' as const, name: 'All' },
+  ...Object.values(CITIES).map(c => ({ id: c.id, name: c.name })),
+]
 
 const areaLabel = computed(() => {
   if (nearMode.value) return 'Near you'
@@ -48,29 +54,64 @@ const noNearby = computed(() =>
 <template>
   <section id="discover" class="scroll-mt-20 px-4 py-14 sm:px-6">
     <div class="mx-auto max-w-7xl">
-      <div class="flex flex-wrap items-end justify-between gap-3">
+      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p class="text-[11px] font-medium uppercase tracking-[0.22em] text-mist">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-marquee">
             {{ areaLabel }}
           </p>
-          <h2 class="mt-1 font-display text-2xl text-paper sm:text-3xl">Discover</h2>
+          <h2 class="mt-1 font-display text-2xl text-paper sm:text-3xl">Discover Theatres</h2>
         </div>
-        <div class="flex items-center gap-3">
+
+        <!-- Controls Toolbar above Map -->
+        <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <!-- Search Bar -->
+          <label class="relative flex-1 sm:flex-initial">
+            <input
+              v-model="search"
+              type="search"
+              placeholder="Search cinemas…"
+              class="w-full sm:w-48 md:w-56 rounded-full border border-reel bg-bg-alt py-1.5 pl-8 pr-3 text-xs text-paper placeholder:text-mist/60 focus:border-marquee focus:outline-none"
+            />
+            <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-mist" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="M16 16l4.5 4.5" stroke-linecap="round" />
+            </svg>
+          </label>
+
+          <!-- City Switcher (All, Kochi, Bengaluru) -->
+          <div class="flex rounded-full border border-reel bg-bg-alt p-1" title="Browse predefined cities">
+            <button
+              v-for="c in cityOptions"
+              :key="c.id"
+              :class="[
+                'btn-press rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors',
+                !nearMode && city === c.id ? 'bg-marquee text-ink' : 'text-mist hover:text-paper',
+              ]"
+              @click="setCity(c.id)"
+            >
+              {{ c.name }}
+            </button>
+          </div>
+
+          <!-- Near Me Button -->
           <button
             :class="[
-              'btn-press rounded-lg border px-4 py-2 text-xs font-semibold transition-colors',
+              'btn-press flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors',
               nearMode
                 ? 'border-sage bg-sage text-ink hover:bg-curtain-bright'
                 : 'border-reel text-paper hover:border-mist/60',
             ]"
             @click="requestLocation()"
           >
-            {{ locating ? 'Locating…' : nearMode ? '✓ Showing nearby' : 'Near me' }}
+            <span v-if="nearMode">✓</span>
+            {{ locating ? 'Locating…' : nearMode ? 'Near You' : 'Near Me' }}
           </button>
+
           <span v-if="nearPhaseLabel" class="animate-pulse text-[11px] font-medium text-marquee">
             {{ nearPhaseLabel }}
           </span>
-          <span class="text-xs text-mist">{{ filteredCinemas.length }} cinemas</span>
+
+          <!-- Min Rating Dropdown -->
           <label class="flex items-center gap-1.5 font-mono text-xs text-mist">
             <span class="hidden sm:inline">Min</span>
             <select
@@ -84,8 +125,11 @@ const noNearby = computed(() =>
               <option :value="4.5">4.5+</option>
             </select>
           </label>
+
+          <span class="text-xs text-mist shrink-0">({{ filteredCinemas.length }})</span>
         </div>
       </div>
+
 
       <div class="mt-6 grid gap-5 lg:grid-cols-[55fr_45fr]">
         <!-- Map panel — always renders every cinema, no matter the filters or zoom -->

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { CITIES } from '~/utils/cities'
 
-const { city, setCity, search, openAuthModal } = useCinemaStore()
+const { openAuthModal } = useCinemaStore()
 const { user, signOut } = useAuth()
 
 const scrolled = ref(false)
@@ -14,12 +13,8 @@ onMounted(() => {
   onScroll()
 })
 onUnmounted(() => window.removeEventListener('scroll', onScroll))
-
-const cityOptions = [
-  { id: 'all' as const, name: 'All' },
-  ...Object.values(CITIES).map(c => ({ id: c.id, name: c.name })),
-]
 </script>
+
 
 <template>
   <header
@@ -43,34 +38,7 @@ const cityOptions = [
 
       </a>
 
-      <div class="ml-auto flex items-center gap-2 sm:gap-3">
-        <label class="relative hidden md:block">
-          <input
-            v-model="search"
-            type="search"
-            placeholder="Search cinemas…"
-            class="w-44 rounded-full border border-reel bg-bg-alt py-1.5 pl-8 pr-3 text-sm text-paper placeholder:text-mist/60 focus:border-marquee focus:outline-none"
-          />
-          <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-mist" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <circle cx="11" cy="11" r="6.5" />
-            <path d="M16 16l4.5 4.5" stroke-linecap="round" />
-          </svg>
-        </label>
-
-        <div class="flex rounded-full border border-reel bg-bg-alt p-1" title="Browse predefined cities — Near Me ignores this">
-          <button
-            v-for="c in cityOptions"
-            :key="c.id"
-            :class="[
-              'btn-press rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-widest transition-colors',
-              city === c.id ? 'bg-marquee text-ink' : 'text-mist hover:text-paper',
-            ]"
-            @click="setCity(c.id)"
-          >
-            {{ c.name }}
-          </button>
-        </div>
-
+      <div class="ml-auto flex items-center gap-3">
         <button
           v-if="!user"
           class="btn-press rounded-lg bg-marquee px-4 py-1.5 text-sm font-semibold text-ink hover:bg-curtain-bright"
@@ -91,4 +59,5 @@ const cityOptions = [
       </div>
     </nav>
   </header>
+
 </template>
