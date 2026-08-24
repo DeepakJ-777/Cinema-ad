@@ -23,7 +23,7 @@ function findCinema() {
   <section id="top" class="px-4 pt-16 pb-14 sm:px-6 sm:pt-24">
     <div class="mx-auto max-w-3xl text-center">
       <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-marquee">
-        Community-powered cinema intelligence
+        .Community-powered.
       </p>
       <h1 class="mt-5 font-display text-[clamp(2.4rem,6.5vw,4.25rem)] leading-[1.05] text-paper">
         Skip the Ads.<br>
@@ -47,18 +47,6 @@ function findCinema() {
         >
           How it works
         </a>
-      </div>
-
-      <!-- The product in one card: listed show + pre-show mechanism → estimated start -->
-      <div class="mx-auto mt-10 max-w-xs rounded-xl border border-reel bg-bg-alt p-5 text-left">
-        <p class="text-[11px] font-medium uppercase tracking-[0.18em] text-mist">7:00 PM show</p>
-        <div class="mt-3 space-y-1.5 text-sm text-body">
-          <p>Typical pre-show: <span class="font-semibold text-paper">~18 min</span></p>
-          <p>🎬 Estimated movie start: <span class="font-semibold text-marquee">7:18 PM</span></p>
-        </div>
-        <p class="mt-4 border-t border-reel pt-3 text-[11px] leading-relaxed text-mist/70">
-          Estimated from community reports — not guaranteed.
-        </p>
       </div>
 
       <!-- KPI strip: value above label, shared grid rhythm -->
