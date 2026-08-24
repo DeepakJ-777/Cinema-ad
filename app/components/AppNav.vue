@@ -37,9 +37,10 @@ const cityOptions = [
             <path d="M10.2 12.4l4 2.1-4 2.1z" fill="#101010" stroke="none" />
           </svg>
         </span>
-        <span class="font-display text-[15px] leading-none text-paper">
-          CINEMA<span class="text-marquee">·</span>COMMUNITY
+        <span class="font-display text-[15px] font-bold tracking-wider text-paper">
+          SHOWSTART<span class="text-marquee">·</span>IN
         </span>
+
       </a>
 
       <div class="ml-auto flex items-center gap-2 sm:gap-3">

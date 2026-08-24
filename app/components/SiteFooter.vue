@@ -3,15 +3,16 @@
     <div class="mx-auto max-w-7xl">
       <div class="rounded-2xl border border-reel bg-bg-alt px-6 py-8">
         <div class="flex flex-wrap items-start justify-between gap-6">
-          <div class="max-w-xs">
+          <div class="max-w-md">
             <p class="font-display text-xl tracking-wide text-paper">
-              CINEMA<span class="text-marquee">·</span>COMMUNITY
+              SHOWSTART<span class="text-marquee">·</span>IN
             </p>
             <p class="mt-2 text-xs leading-relaxed text-mist">
-              Real movie start times for cinemas in Kochi &amp; Bengaluru — showtimes plus crowd-reported
-              pre-show lengths and honest theatre ratings. Prototype with seeded demo data.
+              Real movie start times, live showtimes, and crowdsourced pre-show ad tracking. 
+              Built for moviegoers across Kochi, Bengaluru, and nearby screens to make every theatre visit seamless.
             </p>
           </div>
+
           <div class="font-mono text-[11px] leading-relaxed text-mist/80">
             <p class="uppercase tracking-widest text-mist">Credits</p>
             <p class="mt-2">Map data © OpenStreetMap contributors</p>

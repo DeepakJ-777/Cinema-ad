@@ -14,14 +14,15 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'en' },
-      title: 'Know When Your Movie Actually Starts — Cinema Community',
+      title: 'ShowStart — Skip the Ads. Catch the Movie.',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
           name: 'description',
           content:
-            'See when the movie really begins: estimated actual start times from listed showtimes and real moviegoer pre-show reports, for cinemas in Kochi & Bengaluru.',
+            'See when the movie really begins: live showtimes paired with crowdsourced pre-show ad durations so you never sit through 20 minutes of commercials again.',
         },
+
         { name: 'theme-color', content: '#0E0E0E' },
       ],
       link: [
