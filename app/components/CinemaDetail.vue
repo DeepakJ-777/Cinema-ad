@@ -66,14 +66,22 @@ function rateCinema() {
 
         <!-- 6-category rating grid -->
         <div class="mt-8">
-          <h3 class="text-xs font-semibold uppercase tracking-[0.18em] text-mist">The crowd verdict</h3>
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-semibold uppercase tracking-[0.18em] text-mist">The crowd verdict</h3>
+            <span v-if="!activeCinema.ratingCount" class="text-[11px] text-mist/70">No community ratings yet</span>
+          </div>
           <RatingBars
+            v-if="activeCinema.ratingCount > 0"
             :key="`${activeCinema.id}-bars`"
             :ratings="activeCinema.ratings"
             :overall="activeCinema.overall"
             class="mt-4"
           />
+          <p v-else class="mt-3 rounded-lg bg-bg-alt2 p-4 text-xs leading-relaxed text-mist">
+            No rating breakdown available yet. Tap "Rate this theatre" above to share your experience!
+          </p>
         </div>
+
 
         <!-- Audience quotes -->
         <div v-if="activeCinema.reviews.length" class="mt-8">
