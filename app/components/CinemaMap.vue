@@ -137,10 +137,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="relative h-full w-full">
+  <div class="relative isolate z-0 h-full w-full">
     <div ref="el" class="h-full w-full" />
     <div v-if="!ready" class="absolute inset-0 grid place-items-center bg-bg-alt2/80">
       <span class="font-mono text-xs uppercase tracking-widest text-mist">Loading map…</span>
     </div>
   </div>
 </template>
+

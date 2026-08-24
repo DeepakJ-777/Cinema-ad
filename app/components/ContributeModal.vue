@@ -86,11 +86,12 @@ async function submit() {
     <Transition name="pop">
       <div
         v-if="showContribute && contributeTarget"
-        class="fixed inset-0 z-50 grid place-items-center overflow-y-auto p-4"
+        class="fixed inset-0 z-[9999] grid place-items-center overflow-y-auto p-4"
         role="dialog"
         aria-modal="true"
         aria-label="Contribute ad duration and ratings"
       >
+
         <div class="absolute inset-0 bg-bg/80 backdrop-blur-sm" @click="close" />
 
         <div class="modal-card relative w-full max-w-lg rounded-xl border border-reel bg-bg-alt p-6 text-paper shadow-2xl sm:p-8">
