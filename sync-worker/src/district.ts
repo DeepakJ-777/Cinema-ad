@@ -36,7 +36,7 @@
  * to re-verify the city id cheaply).
  */
 
-import { politeFetch, sleep } from './http'
+import { politeFetch, sleep } from './http.ts'
 import {
   ProviderBlockedError,
   ProviderSkippedError,
@@ -44,7 +44,7 @@ import {
   type ProviderInput,
   type ProviderLocationData,
   type ShowtimeProvider,
-} from './provider'
+} from './provider.ts'
 
 const ORIGIN = 'https://www.district.in'
 const BETWEEN_FETCHES_MS = 2000
@@ -60,8 +60,9 @@ const GENERIC_TOKENS = new Set([
   'screen', 'screens', 'miniplex', 'imax',
 ])
 
-/** City aliases (incl. District's own spellings) stripped from venue names. */
-const CITY_ALIASES: Record<string, string[]> = {
+/** City aliases (incl. District's own spellings) stripped from venue names.
+ *  Exported for server-side Near Me city resolution (server/utils/district-near.ts). */
+export const CITY_ALIASES: Record<string, string[]> = {
   kochi: ['kochi', 'cochin', 'ernakulam', 'edappally'],
   bengaluru: ['bengaluru', 'bangalore', 'bengaluruin'],
 }
@@ -186,7 +187,9 @@ export function extractCityId(json: unknown): string | undefined {
   return walk(json, 0)
 }
 
-function parseNextData(html: string, url: string): Record<string, unknown> {
+/** __NEXT_DATA__ of a District page. Exported for Near Me city verification
+ *  (server/utils/district-near.ts reads the directory's footer city id). */
+export function parseNextData(html: string, url: string): Record<string, unknown> {
   const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)
   if (!m) throw new Error(`no __NEXT_DATA__ script in ${url}`)
   try {

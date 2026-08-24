@@ -20,8 +20,9 @@
  * new Date() — so no runtime timezone can shift it.
  */
 
+import { politeFetch, UA, type FetchBudget } from './http.ts'
+
 const ORIGIN = 'https://www.district.in'
-const UA = 'CinemaCommunity-Sync/0.1 (community cinema start-times app; contact: dev@example.com)'
 
 export interface DistrictShow {
   cinemaId: string
@@ -113,17 +114,22 @@ export async function getDistrictCinemaShows(
   cinemaId: string,
   citySlug: string,
   date = istToday(),
+  options: { timeoutMs?: number } = {},
 ): Promise<DistrictCinemaShows> {
   const url = `${ORIGIN}/movies/x-in-${citySlug}-CD${cinemaId}?fromdate=${date}`
+  const budget: FetchBudget = { left: 2 }
+  const res = await politeFetch(url, budget, 'text/html,application/xhtml+xml', {
+    timeoutMs: options.timeoutMs ?? 20_000,
+    allowOneRetryOnReset: true,
+    retryDelayMs: 4000,
+  })
 
-  const res = await fetch(url, {
-    headers: { 'user-agent': UA, accept: 'text/html,application/xhtml+xml' },
-    redirect: 'follow',
-  }).catch(e => { throw new Error(`network error fetching ${url}: ${e}`) })
-  const body = await res.text().catch(() => '')
-  if (res.status !== 200)
-    throw new Error(`HTTP ${res.status} ${res.statusText} from ${url} — body: "${body.slice(0, 160).replace(/\s+/g, ' ')}"`)
+  if (res.status !== 200 || !res.body) {
+    const reason = res.blockedReason || res.errorReason || `HTTP ${res.status} ${res.statusText}`
+    throw new Error(`fetch failed for CD${cinemaId} (${url}): ${reason}`)
+  }
 
+  const body = res.body
   const m = body.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)
   if (!m) throw new Error(`no __NEXT_DATA__ script in ${url} (${body.length} bytes)`)
   let json: any

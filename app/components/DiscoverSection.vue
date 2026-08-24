@@ -13,6 +13,7 @@ const {
   userLocation,
   nearMode,
   locating,
+  nearPhaseLabel,
   selectCinema,
   requestLocation,
   distanceTo,
@@ -66,6 +67,9 @@ const noNearby = computed(() =>
           >
             {{ locating ? 'Locating…' : nearMode ? '✓ Showing nearby' : 'Near me' }}
           </button>
+          <span v-if="nearPhaseLabel" class="animate-pulse text-[11px] font-medium text-marquee">
+            {{ nearPhaseLabel }}
+          </span>
           <span class="text-xs text-mist">{{ filteredCinemas.length }} cinemas</span>
           <label class="flex items-center gap-1.5 font-mono text-xs text-mist">
             <span class="hidden sm:inline">Min</span>

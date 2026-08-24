@@ -4,6 +4,8 @@ import { getDb } from '../../utils/db'
 import { allowRequest } from '../../utils/rate-limit'
 import { cinemas as cinemasTable, discoveryCache } from '../../database/schema'
 import { geohashEncode } from '../../utils/geohash'
+import { buildCinemaPayloads } from '../../utils/cinema-shows-payload'
+import { syncNearbyCinemasBackground } from '../../utils/district-near'
 
 /**
  * Near-me cinema lookup — cache-first ("Discover → save to D1 → reuse"):
@@ -78,10 +80,12 @@ interface OverpassAttempt {
 async function fetchOverpass(
   lat: number,
   lng: number,
-  radiusM: number
+  radiusM: number,
+  queryOverride?: string,
 ): Promise<{ elements: any[]; attempts: OverpassAttempt[] } | null> {
   // `out center` gives nodes their lat/lon and ways/relations a usable centroid.
-  const query = `[out:json][timeout:25];(node["amenity"="cinema"](around:${Math.round(radiusM)},${lat},${lng});way["amenity"="cinema"](around:${Math.round(radiusM)},${lat},${lng});relation["amenity"="cinema"](around:${Math.round(radiusM)},${lat},${lng}););out center;`
+  const query = queryOverride
+    ?? `[out:json][timeout:25];(node["amenity"="cinema"](around:${Math.round(radiusM)},${lat},${lng});way["amenity"="cinema"](around:${Math.round(radiusM)},${lat},${lng});relation["amenity"="cinema"](around:${Math.round(radiusM)},${lat},${lng}););out center;`
   const attempts: OverpassAttempt[] = []
 
   for (const endpoint of OVERPASS_ENDPOINTS) {
@@ -165,7 +169,7 @@ export default defineEventHandler(async (event) => {
   const db = await getDb(event)
 
   // Everything already known — this is the "reuse" path
-  const known = (await db.all(sql`SELECT id, name, address, city, latitude, longitude FROM cinemas`)) as any[]
+  const known = (await db.all(sql`SELECT id, name, address, city, latitude, longitude, district_cinema_id, last_synced_at FROM cinemas`)) as any[]
 
   // Discovery cache: has this ~25 km cell been swept recently?
   const cell = geohashEncode(lat, lng, 4)
@@ -286,6 +290,26 @@ export default defineEventHandler(async (event) => {
     .filter(x => x.m <= radiusM)
     .sort((a, b) => a.m - b.m)
 
+  // --- Near Me → real showtimes (non-blocking background sync) -----------
+  const nearbyCinemas = withDist.map(x => ({ ...x.c, km: Math.round(x.m / 100) / 10 }))
+  if (nearbyCinemas.length) {
+    syncNearbyCinemasBackground(event, db, nearbyCinemas)
+  }
+
+  // Full /api/cinemas-style payload (today's shows, ad medians, ratings,
+  // reviews, syncedAt, isSyncing) for the nearby cinemas.
+  const top = withDist.slice(0, 50)
+  let cinemasOut: any[] = []
+  if (top.length) {
+    const idIn = sql.join(top.map(x => sql`${x.c.id}` as any), sql`, `)
+    const freshRows = (await db.all(sql`SELECT id, name, address, city, latitude, longitude, district_cinema_id, last_synced_at FROM cinemas WHERE id IN (${idIn})`)) as any[]
+    const payloadById = new Map((await buildCinemaPayloads(db, freshRows)).map(p => [p.id, p]))
+    cinemasOut = top.map(({ c, m }) => ({
+      ...payloadById.get(c.id),
+      distanceKm: Math.round(m / 100) / 10,
+    }))
+  }
+
   return {
     ok: true,
     source, // 'cache' (reused D1) | 'live' (Overpass swept) | 'unavailable'
@@ -293,15 +317,8 @@ export default defineEventHandler(async (event) => {
     radiusKm,
     cell,
     nearbyCount: withDist.length,
-    cinemas: withDist.slice(0, 50).map(({ c, m }) => ({
-      id: c.id,
-      name: c.name,
-      city: c.city,
-      address: c.address,
-      lat: c.latitude,
-      lng: c.longitude,
-      distanceKm: Math.round(m / 100) / 10,
-    })),
+    showtimes: { status: 'available' },
+    cinemas: cinemasOut,
     // Dev-only pipeline diagnostics — never shipped in the production build.
     ...(import.meta.dev ? { diagnostics: diag } : {}),
   }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Movie } from '~/types'
-import { fmt12, shiftMinutes } from '~/utils/time'
+import { fmt12, roundHHMMTo5, shiftMinutes } from '~/utils/time'
 
 const props = defineProps<{ movie: Movie }>()
 
@@ -41,15 +41,34 @@ function toggle() {
   }
 }
 
-/** Estimated actual start = listed time + typical pre-show (community model). */
-const estStart = computed(() => {
+/**
+ * PREDICTION vs HISTORY — reports are historical (submitted during/after a
+ * show); the estimate below is forward-looking and its honesty scales with
+ * how many past reports exist:
+ *   1–2 reports → Low: coarse duration only, relative phrasing, NO clock time
+ *                (a single report must never look like a precise prediction)
+ *   3–5 reports → Medium: expected start rounded to the nearest 5 minutes
+ *   6+ reports → High: expected start to the minute
+ */
+const CONF = {
+  low: { label: 'Low confidence', chip: 'bg-amber-400/15 text-amber-300' },
+  medium: { label: 'Medium confidence', chip: 'bg-mist/15 text-mist' },
+  high: { label: 'High confidence', chip: 'bg-marquee/15 text-marquee' },
+} as const
+type Tier = keyof typeof CONF
+
+const roundTo5 = (v: number) => Math.round(v / 5) * 5
+
+const estimate = computed(() => {
   const st = selectedShow.value
-  if (!st || st.adDurationMin == null) return null
-  const base = Math.round(st.adDurationMin)
-  return {
-    lo: shiftMinutes(st.startTime, base - 1),
-    hi: shiftMinutes(st.startTime, base + 1),
+  if (!st || st.adDurationMin == null || st.adReports < 1) return null
+  const tier: Tier = st.adReports >= 6 ? 'high' : st.adReports >= 3 ? 'medium' : 'low'
+  const med = Math.round(st.adDurationMin)
+  if (tier === 'low') {
+    return { tier, reports: st.adReports, adsLabel: `~${roundTo5(med)} min`, startAt: null as string | null }
   }
+  const startRaw = shiftMinutes(st.startTime, med)
+  return { tier, reports: st.adReports, adsLabel: `~${med} min`, startAt: tier === 'medium' ? roundHHMMTo5(startRaw) : startRaw }
 })
 
 const arriveBy = computed(() =>
@@ -120,26 +139,37 @@ function report() {
           </div>
 
           <div v-if="selectedShow" class="mt-3 rounded-lg bg-bg p-3">
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <template v-if="selectedShow.adDurationMin != null">
-                <span class="font-display text-2xl text-marquee">
-                  ~{{ Math.round(selectedShow.adDurationMin) }} min
-                </span>
+            <template v-if="estimate">
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span class="font-display text-2xl text-marquee">{{ estimate.adsLabel }}</span>
                 <span class="text-xs text-mist">
-                  pre-show · {{ selectedShow.adReports }} report{{ selectedShow.adReports === 1 ? '' : 's' }}
-                  <span :class="selectedShow.adReports >= 5 ? 'text-marquee' : 'text-mist/60'">
-                    · {{ selectedShow.adReports >= 5 ? 'good confidence' : 'few reports' }}
-                  </span>
+                  of ads reported · {{ estimate.reports }} past report{{ estimate.reports === 1 ? '' : 's' }}
                 </span>
-              </template>
-              <span v-else class="font-display text-xl text-mist">no reports yet</span>
-            </div>
-            <p v-if="estStart" class="mt-2 text-xs leading-relaxed text-body">
-              Today · {{ fmt12(selectedShow.startTime) }} listed · 🎬 Estimated movie start ≈ {{ fmt12(estStart.lo) }}–{{ fmt12(estStart.hi) }}
-            </p>
-            <p v-else-if="selectedShow" class="mt-2 text-xs leading-relaxed text-mist">
-              Nobody has reported this show yet — you could be the first.
-            </p>
+                <span
+                  :class="['rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide', CONF[estimate.tier].chip]"
+                >
+                  {{ CONF[estimate.tier].label }}
+                </span>
+              </div>
+              <p class="mt-2 text-xs leading-relaxed text-body">
+                <template v-if="estimate.startAt">
+                  🎬 Movie likely starts around {{ fmt12(estimate.startAt) }}{{ estimate.tier === 'medium' ? ' (±5 min)' : '' }} —
+                  arrive by the listed time ({{ fmt12(selectedShow.startTime) }}) to catch the pre-show from the start.
+                </template>
+                <template v-else>
+                  🎬 With so few reports, expect the movie to start roughly {{ estimate.adsLabel }} after
+                  the listed time ({{ fmt12(selectedShow.startTime) }}) — too few reports for a precise start, so
+                  plan to be seated by the listed time.
+                </template>
+              </p>
+            </template>
+            <template v-else>
+              <span class="font-display text-xl text-mist">no reports yet</span>
+              <p class="mt-2 text-xs leading-relaxed text-mist">
+                Nobody has reported this show yet — reports come in during/after the show, so an
+                estimate appears once moviegoers add theirs. You could be the first.
+              </p>
+            </template>
             <div class="mt-3 flex flex-wrap items-center gap-2">
               <span v-if="activeCinema?.overall != null" class="rounded-md bg-marquee/15 px-2 py-1 text-[11px] font-medium text-marquee">
                 ★ {{ activeCinema.overall.toFixed(1) }}/5 theatre

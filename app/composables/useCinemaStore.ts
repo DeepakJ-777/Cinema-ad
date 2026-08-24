@@ -42,6 +42,13 @@ export function useCinemaStore() {
   const showContribute = useState('cc:contrib-open', () => false)
   const contributeTarget = useState<ContributeTarget | null>('cc:contrib-target', () => null)
   const authModalOpen = useState('cc:auth-open', () => false)
+  /** Near Me progress phases — surfaced as a small status line in the UI. */
+  const nearPhase = useState<'idle' | 'locating' | 'finding' | 'syncing'>('cc:near-phase', () => 'idle')
+  const nearPhaseLabel = computed(() => ({
+    locating: 'Getting your location…',
+    finding: 'Finding nearby cinemas…',
+    syncing: 'Getting today’s showtimes…',
+  } as Record<string, string>)[nearPhase.value] ?? '')
   const toast = useToast()
 
   const { data, pending, error, refresh } = useFetch<Payload>('/api/cinemas', {
@@ -131,34 +138,50 @@ export function useCinemaStore() {
     }
     if (sortByDistance.value) {
       sortByDistance.value = false
+      nearPhase.value = 'idle'
       return
     }
     if (locating.value) return
     locating.value = true
+    nearPhase.value = 'locating'
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
         sortByDistance.value = true
         city.value = 'all' // near-me is geographic; clear the browse filter
-        // Discover → save to D1 → reuse: the endpoint only hits Overpass when
-        // this area has not been swept recently; repeat presses serve from D1.
+        nearPhase.value = 'finding'
+        // A long-running request usually means the server is syncing District
+        // showtimes for the area — upgrade the status line after a pause.
+        const slowTimer = setTimeout(() => {
+          if (nearPhase.value === 'finding') nearPhase.value = 'syncing'
+        }, 3500)
+        // Discover → save to D1 → reuse (and, when the area's city has no
+        // fresh shows yet, sync today's District showtimes) — all server-side.
         let added = 0
         let nearbyCount: number | null = null
+        let showtimesStatus: string | null = null
         try {
-          const res = await $fetch<{ added?: number, nearbyCount?: number, radiusKm?: number }>(
-            '/api/cinemas/near',
-            { query: { lat: userLocation.value.lat, lng: userLocation.value.lng } },
-          )
+          const res = await $fetch<{ added?: number, nearbyCount?: number, radiusKm?: number,
+            showtimes?: { status?: string } }>('/api/cinemas/near', {
+            query: { lat: userLocation.value.lat, lng: userLocation.value.lng },
+          })
           added = res.added ?? 0
           nearbyCount = res.nearbyCount ?? null
+          showtimesStatus = res.showtimes?.status ?? null
           if (res.radiusKm) nearRadiusKm.value = res.radiusKm
-          if (added > 0) await refresh()
         }
         catch {
           // Overpass/DB hiccup — distance sorting over known cinemas still works
         }
+        clearTimeout(slowTimer)
+        if (added > 0 || showtimesStatus === 'synced') await refresh()
         locating.value = false
-        if (nearbyCount === 0)
+        nearPhase.value = 'idle'
+        if (showtimesStatus === 'synced')
+          toast.push('📺 Showtimes updated — sorted by distance')
+        else if (showtimesStatus === 'failed')
+          toast.push('⚠️ Couldn’t fetch fresh showtimes — showing what we have')
+        else if (nearbyCount === 0)
           toast.push(`📡 No cinemas within ${nearRadiusKm.value} km yet — showing the nearest ones`)
         else if (added > 0)
           toast.push(`📡 ${added} cinemas near you added — sorted by distance`)
@@ -167,6 +190,7 @@ export function useCinemaStore() {
       },
       () => {
         locating.value = false
+        nearPhase.value = 'idle'
         toast.push('Could not get your location — check browser permissions')
       },
       { timeout: 8000, maximumAge: 60000 },
@@ -215,7 +239,7 @@ export function useCinemaStore() {
 
   return {
     city, setCity, search, minRating, nearRadiusKm, selectedCinemaId, userLocation, sortByDistance,
-    locating, nearMode,
+    locating, nearMode, nearPhase, nearPhaseLabel,
     showContribute, contributeTarget, authModalOpen, cinemas, filteredCinemas, activeCinema,
     meta, pending, error, selectCinema, distanceTo, requestLocation,
     openContribute, closeContribute, openAuthModal, closeAuthModal, submitContribution,

@@ -139,11 +139,13 @@ function nextDataOf(html: string, url: string): unknown {
 }
 
 /**
- * Same acceptance rules as DistrictProvider: the page's own cityId must match
- * the directory city id when both are known, and the page pin must be within
- * PROXIMITY_LIMIT_M of our pin when both carry coordinates. A `false` return
- * with page data in hand is POSITIVE evidence of a wrong cinema (never just
- * missing data) — callers may act on it (e.g. null a stored id).
+ * Acceptance rules for a candidate District cinema page — same spirit as
+ * DistrictProvider, with one refinement for regional directories: when both
+ * pins exist, the ≤10 km coordinate check is the PRIMARY guard (wrong-
+ * neighbourhood matches measure 14 km+). District's small-town directories
+ * legitimately list cinemas from neighbouring towns whose own pages carry a
+ * different cityId (e.g. Thiruvalla's directory lists Alappuzha cinemas), so
+ * cityId equality is only enforced when a pin is missing.
  */
 function pageVerifies(
   venue: KnownVenue,
@@ -151,16 +153,17 @@ function pageVerifies(
   directoryCityId: string | undefined,
   label: string,
 ): boolean {
-  if (directoryCityId && cinema.cityId && cinema.cityId !== directoryCityId) {
-    console.log(`[district-sync] ${label}: page cityId=${cinema.cityId} ≠ directory cityId=${directoryCityId} — candidate rejected`)
-    return false
-  }
   if (venue.lat != null && venue.lng != null && cinema.lat != null && cinema.lon != null) {
     const m = distanceM(venue.lat, venue.lng, cinema.lat, cinema.lon)
     if (m > PROXIMITY_LIMIT_M) {
       console.log(`[district-sync] ${label}: ${Math.round(m)} m away from our pin — candidate rejected (limit ${PROXIMITY_LIMIT_M} m)`)
       return false
     }
+    return true
+  }
+  if (directoryCityId && cinema.cityId && cinema.cityId !== directoryCityId) {
+    console.log(`[district-sync] ${label}: page cityId=${cinema.cityId} ≠ directory cityId=${directoryCityId} (no usable pins) — candidate rejected`)
+    return false
   }
   return true
 }

@@ -98,9 +98,19 @@ function rateCinema() {
               {{ activeCinema.movies.length }} movies · {{ showsCount }} shows
             </span>
           </div>
+          <p v-if="activeCinema.movies.length" class="mt-1 text-[11px] leading-relaxed text-mist/80">
+            Reports are historical — moviegoers submit them during or after a show. Estimated start
+            times below are predictions from those past reports, to help you arrive before the movie begins.
+          </p>
           <div class="mt-3 space-y-3">
             <p
-              v-if="!activeCinema.movies.length && providerConfirmed"
+              v-if="!activeCinema.movies.length && (activeCinema as any).isSyncing"
+              class="rounded-lg bg-bg-alt2 p-4 text-sm leading-relaxed text-mist"
+            >
+              Showtimes are being updated...
+            </p>
+            <p
+              v-else-if="!activeCinema.movies.length && providerConfirmed"
               class="rounded-lg bg-bg-alt2 p-4 text-sm leading-relaxed text-mist"
             >
               No shows today — our showtime provider currently lists no sessions at this
@@ -117,6 +127,7 @@ function rateCinema() {
             </p>
             <MovieRow v-for="m in activeCinema.movies" :key="m.id" :movie="m" />
           </div>
+
         </div>
       </div>
     </div>

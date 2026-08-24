@@ -80,8 +80,13 @@ export interface ProviderInput {
 /** The provider refused automated access (bot protection, auth, etc.).
  *  The run must stop and log — never retry or work around. */
 export class ProviderBlockedError extends Error {
-  constructor(reason: string, public status?: number) { super(reason) }
+  status?: number
+  constructor(reason: string, status?: number) {
+    super(reason)
+    this.status = status
+  }
 }
+
 
 /** Configuration incomplete (e.g. missing region_code) — skip, don't fail. */
 export class ProviderSkippedError extends Error {}
