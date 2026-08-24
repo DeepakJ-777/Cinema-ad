@@ -28,7 +28,18 @@ const r1 = (v: number) => Math.round(v * 10) / 10
 
 export async function buildCinemaPayloads(db: Db, cinemas: CinemaPayloadRow[]): Promise<any[]> {
   if (!cinemas.length) return []
+  const CHUNK_SIZE = 50
+  if (cinemas.length > CHUNK_SIZE) {
+    const results: any[] = []
+    for (let i = 0; i < cinemas.length; i += CHUNK_SIZE) {
+      const chunk = cinemas.slice(i, i + CHUNK_SIZE)
+      results.push(...await buildCinemaPayloads(db, chunk))
+    }
+    return results
+  }
+
   const idList = sql.join(cinemas.map(c => sql`${c.id}` as any), sql`, `)
+
 
   const movies = (await db.all(sql`SELECT id, title, language, duration_min AS durationMin, hue, emoji FROM movies`)) as any[]
   const movieMap = new Map(movies.map(m => [m.id, m]))
