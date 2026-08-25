@@ -120,6 +120,20 @@ const c3 = g3.body.cinemas.find(c => c.id === cinema.id)
 ok('rating count grew by exactly 1 after two submissions', c3.ratingCount === cinema.ratingCount + 1, `got ${c3.ratingCount}, want ${cinema.ratingCount + 1}`)
 ok('overall average updated', c3.overall != null && c3.overall > 0)
 
+console.log('— favourites —')
+const anonFav = await j('/api/favourites')
+ok('GET /api/favourites anon → []', anonFav.status === 200 && Array.isArray(anonFav.body.favourites) && anonFav.body.favourites.length === 0)
+const postFavAnon = await post('/api/favourites', { cinemaId: cinema.id })
+ok('POST /api/favourites anon → 401', postFavAnon.status === 401)
+const postFav = await post('/api/favourites', { cinemaId: cinema.id }, cookie)
+ok('POST /api/favourites signed in → 200', postFav.status === 200)
+const userFav = await j('/api/favourites', { headers: { cookie } })
+ok('GET /api/favourites has cinemaId', userFav.status === 200 && userFav.body.favourites.includes(cinema.id))
+const delFav = await j(`/api/favourites?cinemaId=${cinema.id}`, { method: 'DELETE', headers: { cookie } })
+ok('DELETE /api/favourites → 200', delFav.status === 200)
+const userFavAfter = await j('/api/favourites', { headers: { cookie } })
+ok('GET /api/favourites empty after DELETE', userFavAfter.status === 200 && !userFavAfter.body.favourites.includes(cinema.id))
+
 console.log('— rate limiting (basic spam protection) —')
 let saw429 = false
 for (let i = 0; i < 8; i++) {
@@ -130,3 +144,4 @@ ok('hammering the API eventually returns 429', saw429)
 
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)
+

@@ -43,6 +43,13 @@
       "when": 1786956524233,
       "tag": "0005_district_cinema_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787650892540,
+      "tag": "0006_favourites",
+      "breakpoints": true
     }
   ]
 }

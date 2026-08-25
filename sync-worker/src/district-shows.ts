@@ -80,7 +80,7 @@ function splitWallClock(showTime: unknown): { date: string, time: string } | und
   const raw = str(showTime)
   if (!raw) return undefined
   const m = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/)
-  return m ? { date: m[1], time: m[2] } : undefined
+  return m && m[1] && m[2] ? { date: m[1], time: m[2] } : undefined
 }
 
 /** seatStatus label → snake_case; else derive from areas[]/counts.
@@ -131,7 +131,7 @@ export async function getDistrictCinemaShows(
 
   const body = res.body
   const m = body.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)
-  if (!m) throw new Error(`no __NEXT_DATA__ script in ${url} (${body.length} bytes)`)
+  if (!m || !m[1]) throw new Error(`no __NEXT_DATA__ script in ${url} (${body.length} bytes)`)
   let json: any
   try {
     json = JSON.parse(m[1])

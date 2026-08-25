@@ -1,5 +1,5 @@
 <template>
-  <footer class="px-4 pb-10 sm:px-6">
+  <footer id="about" class="scroll-mt-20 px-4 pb-10 sm:px-6">
     <div class="mx-auto max-w-7xl">
       <div class="rounded-2xl border border-reel bg-bg-alt px-6 py-8">
         <div class="flex flex-wrap items-start justify-between gap-6">

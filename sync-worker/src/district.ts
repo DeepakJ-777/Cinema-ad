@@ -131,7 +131,7 @@ export function splitWallClock(showTime?: unknown): { date: string, time: string
   const raw = str(showTime)
   if (!raw) return undefined
   const m = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?/)
-  if (!m) return undefined
+  if (!m || !m[1] || !m[2]) return undefined
   return { date: m[1], time: m[2], full: `${m[1]}T${m[2]}` }
 }
 
@@ -154,6 +154,7 @@ export function extractCinemaLinks(html: string, citySlug: string): DistrictCine
   while ((m = re.exec(html))) {
     const slug = m[1]
     const districtId = m[2]
+    if (!slug || !districtId) continue
     if (out.has(districtId)) continue
     out.set(districtId, {
       districtId,
@@ -191,7 +192,7 @@ export function extractCityId(json: unknown): string | undefined {
  *  (server/utils/district-near.ts reads the directory's footer city id). */
 export function parseNextData(html: string, url: string): Record<string, unknown> {
   const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/)
-  if (!m) throw new Error(`no __NEXT_DATA__ script in ${url}`)
+  if (!m || !m[1]) throw new Error(`no __NEXT_DATA__ script in ${url}`)
   try {
     return JSON.parse(m[1]) as Record<string, unknown>
   }

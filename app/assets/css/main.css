@@ -65,7 +65,16 @@ select:focus-visible {
   border: 1px solid #232323;
   background: var(--color-bg-alt2);
   color: var(--color-paper);
-  transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+/* Quick-action buttons (Contribute AD data / Add rating): below md they span
+   the full row under the card content; from md up they sit in a third column
+   on the right, stacked and bottom-aligned with the VIEW link. */
+@media (min-width: 768px) {
+  .ticket {
+    grid-template-columns: minmax(0, 1fr) 108px auto;
+  }
 }
 
 .ticket:hover {

@@ -315,6 +315,7 @@ export function syncNearbyCinemasBackground(
       console.log(`[near-bg] Starting sequential background sync for ${candidatesToSync.length} cinemas...`)
       for (let i = 0; i < candidatesToSync.length; i++) {
         const cinema = candidatesToSync[i]
+        if (!cinema) continue
         const citySlug = cityToSlug(cinema.city) || 'kochi'
         try {
           await syncSingleCinema(db, cinema, citySlug, today)
@@ -347,7 +348,7 @@ export function syncNearbyCinemasBackground(
     event.waitUntil(taskPromise)
   }
   else if ((event?.context as any)?.cloudflare?.context?.waitUntil) {
-    ;(event.context as any).cloudflare.context.waitUntil(taskPromise)
+    ;(event?.context as any).cloudflare.context.waitUntil(taskPromise)
   }
   else {
     taskPromise.catch(err => console.error('[near-bg-promise] unhandled:', err))

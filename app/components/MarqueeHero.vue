@@ -1,15 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
-const { cinemas, meta, pending, requestLocation } = useCinemaStore()
-
-const fmt = (n: number) => n.toLocaleString('en-IN')
-const stats = computed(() => [
-  { label: 'Cinemas', value: cinemas.value.length },
-  { label: 'Pre-show reports', value: meta.value.adReports },
-  { label: 'Ratings', value: meta.value.ratings },
-  { label: 'Moviegoers', value: meta.value.contributors ?? 0 },
-])
+const { requestLocation } = useCinemaStore()
 
 /** Primary CTA: jump to Discover and ask for location — the label promises "near you". */
 function findCinema() {
@@ -49,17 +39,7 @@ function findCinema() {
         </a>
       </div>
 
-      <!-- KPI strip: value above label, shared grid rhythm -->
-      <div class="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-reel bg-reel sm:grid-cols-4">
-        <div v-for="s in stats" :key="s.label" class="bg-bg-alt px-4 py-5 text-center">
-          <p class="font-display text-2xl text-paper">{{ pending ? '…' : fmt(s.value) }}</p>
-          <p class="mt-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-mist">
-            {{ s.label }}
-          </p>
-        </div>
-      </div>
-
-      <p class="mt-5 text-[11px] font-medium uppercase tracking-widest text-mist/70">
+      <p class="mt-6 text-[11px] font-medium uppercase tracking-widest text-mist/70">
         No login needed to browse — ever
       </p>
     </div>

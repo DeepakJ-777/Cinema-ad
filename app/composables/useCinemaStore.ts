@@ -197,6 +197,32 @@ export function useCinemaStore() {
     )
   }
 
+  /** One-shot location fix for the map's Locate button. Purely geographic —
+   *  unlike requestLocation() it never enters near-me mode and never touches
+   *  the city filter or the cinema list. Reuses the stored fix when present. */
+  function locateUser(): Promise<{ lat: number; lng: number } | null> {
+    if (userLocation.value) return Promise.resolve(userLocation.value)
+    if (!import.meta.client || !('geolocation' in navigator)) {
+      toast.push('📡 Location is not available on this device')
+      return Promise.resolve(null)
+    }
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          resolve(userLocation.value)
+        },
+        (err) => {
+          toast.push(err.code === err.PERMISSION_DENIED
+            ? 'Location permission denied — check browser settings'
+            : '📡 Location unavailable — try again')
+          resolve(null)
+        },
+        { timeout: 8000, maximumAge: 60000 },
+      )
+    })
+  }
+
   function openContribute(target: ContributeTarget) {
     contributeTarget.value = target
     showContribute.value = true
@@ -241,7 +267,7 @@ export function useCinemaStore() {
     city, setCity, search, minRating, nearRadiusKm, selectedCinemaId, userLocation, sortByDistance,
     locating, nearMode, nearPhase, nearPhaseLabel,
     showContribute, contributeTarget, authModalOpen, cinemas, filteredCinemas, activeCinema,
-    meta, pending, error, selectCinema, distanceTo, requestLocation,
+    meta, pending, error, selectCinema, distanceTo, requestLocation, locateUser,
     openContribute, closeContribute, openAuthModal, closeAuthModal, submitContribution,
     refreshCinemas: refresh,
   }

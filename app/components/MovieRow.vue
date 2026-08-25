@@ -18,6 +18,17 @@ const formats = computed(() =>
   [...new Set(props.movie.showtimes.map(s => s.format))].join(' · '),
 )
 
+/** Report-weighted typical ad duration across THIS movie's shows (same
+ *  aggregate the ticket cards use, scoped to one movie). null → no data yet,
+ *  in which case the title line shows no AD text at all. */
+const movieAdMinutes = computed(() => {
+  const all = props.movie.showtimes.filter(st => st.adDurationMin != null && st.adReports > 0)
+  if (!all.length) return null
+  const totalWeight = all.reduce((s, st) => s + (st.adReports || 1), 0)
+  const avg = all.reduce((s, st) => s + st.adDurationMin! * (st.adReports || 1), 0) / totalWeight
+  return Math.round(avg)
+})
+
 /** Availability badge class for a showtime chip (provider data; subtle by design). */
 function availClass(a?: string | null): string {
   if (!a) return ''
@@ -92,23 +103,48 @@ function report() {
       selectedShow ? 'ring-1 ring-marquee/40' : '',
     ]"
   >
-    <button class="flex w-full items-center gap-3 p-3 text-left" @click="toggle">
-      <span
-        class="grid h-14 w-10 shrink-0 place-items-center rounded-md text-lg"
-        :style="{
-          background: `linear-gradient(160deg, hsl(${movie.hue} 16% 26%), hsl(${movie.hue} 18% 14%))`,
-        }"
-      >
-        {{ movie.emoji }}
-      </span>
-      <span class="min-w-0 flex-1">
-        <span class="block truncate font-display text-[15px] leading-tight text-paper">{{ movie.title }}</span>
-        <span class="mt-0.5 block truncate text-[11px] font-medium uppercase tracking-wider text-mist">
-          {{ movie.language }} · {{ Math.floor(movie.durationMin / 60) }}h {{ movie.durationMin % 60 }}m · {{ formats }}
+    <div class="flex w-full items-center gap-2 p-3">
+      <button class="flex min-w-0 flex-1 items-center gap-3 text-left" @click="toggle">
+        <span
+          class="grid h-14 w-10 shrink-0 place-items-center rounded-md text-lg"
+          :style="{
+            background: `linear-gradient(160deg, hsl(${movie.hue} 16% 26%), hsl(${movie.hue} 18% 14%))`,
+          }"
+        >
+          {{ movie.emoji }}
         </span>
-      </span>
-      <span :class="['shrink-0 text-mist transition-transform duration-200', open && 'rotate-180']">▾</span>
-    </button>
+        <span class="min-w-0 flex-1">
+          <span class="flex min-w-0 items-baseline gap-1.5">
+            <span class="truncate font-display text-[15px] leading-tight text-paper">{{ movie.title }}</span>
+            <span
+              v-if="movieAdMinutes != null"
+              class="shrink-0 whitespace-nowrap text-[11px] font-medium text-mist"
+            >
+              • AD ~{{ movieAdMinutes }} min
+            </span>
+          </span>
+          <span class="mt-0.5 block truncate text-[11px] font-medium uppercase tracking-wider text-mist">
+            {{ movie.language }} · {{ Math.floor(movie.durationMin / 60) }}h {{ movie.durationMin % 60 }}m · {{ formats }}
+          </span>
+        </span>
+      </button>
+
+      <!-- Row-level contribute — opens the existing contribute flow for this movie -->
+      <button
+        class="btn-press shrink-0 whitespace-nowrap rounded-lg border border-reel px-2.5 py-1.5 text-xs font-medium text-paper hover:border-marquee hover:text-marquee"
+        @click="report()"
+      >
+        Contribute AD data
+      </button>
+
+      <button
+        :class="['btn-press shrink-0 text-mist transition-transform duration-200', open && 'rotate-180']"
+        aria-label="Toggle showtimes"
+        @click="toggle"
+      >
+        ▾
+      </button>
+    </div>
 
     <div
       class="grid transition-all duration-300 ease-out"
@@ -181,7 +217,7 @@ function report() {
                 class="btn-press ml-auto rounded-lg bg-curtain px-4 py-1.5 text-xs font-semibold text-ink hover:bg-curtain-bright"
                 @click="report()"
               >
-                Report this show
+                Contribute AD data
               </button>
             </div>
           </div>

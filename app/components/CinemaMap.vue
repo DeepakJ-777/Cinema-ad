@@ -14,6 +14,29 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [id: string] }>()
 
+const { locateUser } = useCinemaStore()
+const locating = ref(false)
+
+/** Locate button: refocus the map on the user. Reuses the stored fix when
+ *  present (no permission prompt); otherwise takes one fresh fix via the store. */
+async function locateMe() {
+  if (locating.value) return
+  if (props.userLocation) {
+    focusUser(props.userLocation)
+    return
+  }
+  locating.value = true
+  const loc = await locateUser()
+  locating.value = false
+  if (loc) focusUser(loc)
+}
+
+function focusUser(loc: { lat: number; lng: number }) {
+  if (!map) return
+  // Neighborhood-level zoom; keep a closer manual zoom instead of pulling out.
+  map.flyTo([loc.lat, loc.lng], Math.max(14, map.getZoom()), { duration: 0.8 })
+}
+
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -139,6 +162,23 @@ onUnmounted(() => {
 <template>
   <div class="relative isolate z-0 h-full w-full">
     <div ref="el" class="h-full w-full" />
+    <!-- Floating Locate control — sits above the bottom-right zoom/attribution stack -->
+    <button
+      v-if="ready"
+      type="button"
+      title="Center on my location"
+      aria-label="Center map on my location"
+      class="btn-press absolute bottom-[110px] right-2.5 z-[1000] grid h-9 w-9 place-items-center rounded-lg border border-reel bg-bg-alt2/95 text-paper shadow-lg backdrop-blur-sm hover:border-marquee hover:text-marquee"
+      :class="{ 'animate-pulse cursor-wait': locating }"
+      :disabled="locating"
+      @click="locateMe"
+    >
+      <svg viewBox="0 0 24 24" class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <circle cx="12" cy="12" r="6.5" />
+        <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" stroke-linecap="round" />
+        <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      </svg>
+    </button>
     <div v-if="!ready" class="absolute inset-0 grid place-items-center bg-bg-alt2/80">
       <span class="font-mono text-xs uppercase tracking-widest text-mist">Loading map…</span>
     </div>

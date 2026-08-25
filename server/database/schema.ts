@@ -140,3 +140,11 @@ export const ratings = sqliteTable('ratings', {
   review: text('review'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (t) => [uniqueIndex('ratings_user_cinema_uq').on(t.userId, t.cinemaId), index('ratings_cinema_idx').on(t.cinemaId)])
+
+// --- Favourite theatres: exactly one record per user/cinema pair ---
+export const favourites = sqliteTable('favourites', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  cinemaId: text('cinema_id').notNull().references(() => cinemas.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (t) => [uniqueIndex('favourites_user_cinema_uq').on(t.userId, t.cinemaId), index('favourites_user_idx').on(t.userId)])
