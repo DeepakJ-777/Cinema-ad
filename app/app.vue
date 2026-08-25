@@ -14,6 +14,7 @@ onMounted(() => load())
     <FavouritesSheet />
     <ContributeModal />
     <AuthModal />
+    <SignOutModal />
     <ToastHost />
   </div>
 </template>

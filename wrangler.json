@@ -10,5 +10,8 @@
   },
   "d1_databases": [
     { "binding": "DB", "database_name": "cinema-community", "database_id": "7c892759-48a1-494a-a36b-a304c992ecb5", "migrations_dir": "server/database/migrations" }
-  ]
+  ],
+  "vars": {
+    "GOOGLE_CLIENT_ID": "478352756917-liilgcag6ceac85s4vvu9ghpnoj9de41.apps.googleusercontent.com"
+  }
 }

@@ -8,3 +8,5 @@ logs
 data
 .wrangler
 .dev.vars
+.env    
+.env.example

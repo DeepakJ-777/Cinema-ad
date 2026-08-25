@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 
-const { openAuthModal } = useCinemaStore()
-const { user, signOut } = useAuth()
+const { openAuthModal, openSignOutModal } = useCinemaStore()
+const { user } = useAuth()
 const route = useRoute()
 
 const scrolled = ref(false)
@@ -80,7 +80,7 @@ onUnmounted(() => {
           <button
             :title="`Sign out ${user.name}`"
             class="btn-press grid h-8 w-8 place-items-center rounded-full border border-reel bg-bg-alt2 font-display text-sm text-marquee hover:border-marquee"
-            @click="signOut()"
+            @click="openSignOutModal()"
           >
             {{ user.name[0] }}
           </button>
@@ -128,7 +128,7 @@ onUnmounted(() => {
           <button
             class="btn-press flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-paper hover:bg-bg-alt2"
             role="menuitem"
-            @click="signOut(); menuOpen = false"
+            @click="openSignOutModal(); menuOpen = false"
           >
             Sign out
           </button>

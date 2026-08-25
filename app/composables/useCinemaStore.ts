@@ -42,6 +42,11 @@ export function useCinemaStore() {
   const showContribute = useState('cc:contrib-open', () => false)
   const contributeTarget = useState<ContributeTarget | null>('cc:contrib-target', () => null)
   const authModalOpen = useState('cc:auth-open', () => false)
+  const signOutModalOpen = useState('cc:signout-modal', () => false)
+  const openSignOutModal = () => { signOutModalOpen.value = true }
+  const closeSignOutModal = () => { signOutModalOpen.value = false }
+  const onlyFavourites = useState('cc:fav-filter', () => false)
+  const favIds = useState<string[]>('cc:fav-ids', () => [])
   /** Near Me progress phases — surfaced as a small status line in the UI. */
   const nearPhase = useState<'idle' | 'locating' | 'finding' | 'syncing'>('cc:near-phase', () => 'idle')
   const nearPhaseLabel = computed(() => ({
@@ -71,6 +76,7 @@ export function useCinemaStore() {
       if (!hit) return false
     }
     if (minRating.value > 0 && (c.overall == null || c.overall < minRating.value)) return false
+    if (onlyFavourites.value && !favIds.value.includes(c.id)) return false
     return true
   }
 
@@ -267,6 +273,7 @@ export function useCinemaStore() {
     city, setCity, search, minRating, nearRadiusKm, selectedCinemaId, userLocation, sortByDistance,
     locating, nearMode, nearPhase, nearPhaseLabel,
     showContribute, contributeTarget, authModalOpen, cinemas, filteredCinemas, activeCinema,
+    onlyFavourites, signOutModalOpen, openSignOutModal, closeSignOutModal,
     meta, pending, error, selectCinema, distanceTo, requestLocation, locateUser,
     openContribute, closeContribute, openAuthModal, closeAuthModal, submitContribution,
     refreshCinemas: refresh,

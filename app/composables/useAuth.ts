@@ -10,19 +10,28 @@ export function useAuth() {
   const user = computed(() => session.value?.data?.user ?? null)
   const isPending = computed(() => session.value?.isPending ?? false)
 
-  async function signIn(email: string, password: string) {
-    const { error } = await authClient.signIn.email({ email, password })
-    if (!error) toast.push(`👋 Welcome back!`)
-    return error
-  }
-  async function signUp(name: string, email: string, password: string) {
-    const { error } = await authClient.signUp.email({ name, email, password })
-    if (!error) toast.push(`🎭 Account created — welcome, ${name}!`)
-    return error
+  async function signInWithGoogle() {
+    try {
+      const callbackURL = typeof window !== 'undefined' ? window.location.href : '/'
+      const res = await authClient.signIn.social({
+        provider: 'google',
+        callbackURL,
+      })
+      if (res?.error) {
+        toast.push(res.error.message || 'Google sign-in failed — please try again')
+        return res.error
+      }
+      return null
+    }
+    catch (err: any) {
+      const msg = err?.message || 'Failed to connect to Google sign-in'
+      toast.push(msg)
+      return { message: msg }
+    }
   }
   async function signOut() {
     await authClient.signOut()
     toast.push('Signed out — browsing stays free, forever.')
   }
-  return { user, isPending, signIn, signUp, signOut }
+  return { user, isPending, signInWithGoogle, signOut }
 }

@@ -20,7 +20,23 @@ const {
   requestLocation,
   distanceTo,
   openContribute,
+  openAuthModal,
+  onlyFavourites,
 } = useCinemaStore()
+
+const { user } = useAuth()
+const { ids: favIds } = useFavourites()
+const favCount = computed(() => favIds.value.length)
+const toast = useToast()
+
+function toggleFavouritesFilter() {
+  if (!user.value) {
+    toast.push('Sign in to view your favourite theatres')
+    openAuthModal()
+    return
+  }
+  onlyFavourites.value = !onlyFavourites.value
+}
 
 const cityOptions = [
   { id: 'all' as const, name: 'All' },
@@ -28,6 +44,7 @@ const cityOptions = [
 ]
 
 const areaLabel = computed(() => {
+  if (onlyFavourites.value) return 'Your favourites'
   if (nearMode.value) return 'Near you'
   if (city.value === 'all') return 'All cities'
   return CITIES[city.value]?.name ?? city.value
@@ -123,8 +140,8 @@ function collapseList() {
   visibleCount.value = MOBILE_LIST_PREVIEW
 }
 
-// A new browsing context (search/city/rating/near-me) starts collapsed again.
-watch([search, city, minRating, nearMode], () => {
+// A new browsing context (search/city/rating/near-me/favourites) starts collapsed again.
+watch([search, city, minRating, nearMode, onlyFavourites], () => {
   visibleCount.value = MOBILE_LIST_PREVIEW
 })
 </script>
@@ -168,9 +185,9 @@ watch([search, city, minRating, nearMode], () => {
                 :key="c.id"
                 :class="[
                   'btn-press rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors',
-                  !nearMode && city === c.id ? 'bg-marquee text-ink' : 'text-mist hover:text-paper',
+                  !nearMode && !onlyFavourites && city === c.id ? 'bg-marquee text-ink' : 'text-mist hover:text-paper',
                 ]"
-                @click="setCity(c.id)"
+                @click="setCity(c.id); onlyFavourites = false"
               >
                 {{ c.name }}
               </button>
@@ -184,10 +201,29 @@ watch([search, city, minRating, nearMode], () => {
                   ? 'border-sage bg-sage text-ink hover:bg-curtain-bright'
                   : 'border-reel text-paper hover:border-mist/60',
               ]"
-              @click="requestLocation()"
+              @click="requestLocation(); onlyFavourites = false"
             >
               <span v-if="nearMode">✓</span>
               {{ locating ? 'Locating…' : nearMode ? 'Near You' : 'Near Me' }}
+            </button>
+
+            <!-- Favourites Filter Button -->
+            <button
+              :class="[
+                'btn-press flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors',
+                onlyFavourites
+                  ? 'border-marquee bg-marquee text-ink hover:bg-curtain-bright'
+                  : 'border-reel text-paper hover:border-mist/60',
+              ]"
+              :aria-pressed="onlyFavourites"
+              title="Filter by your favourite theatres"
+              @click="toggleFavouritesFilter()"
+            >
+              <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" :fill="onlyFavourites ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 20s-7.5-4.6-7.5-10a4.6 4.6 0 0 1 7.5-3.6A4.6 4.6 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>Favourites</span>
+              <span v-if="user && favCount > 0" class="text-[10px] opacity-80">({{ favCount }})</span>
             </button>
 
             <span v-if="nearPhaseLabel" class="animate-pulse text-[11px] font-medium text-marquee">
@@ -273,7 +309,22 @@ watch([search, city, minRating, nearMode], () => {
               📡 No cinemas within {{ nearRadiusKm }} km of you yet — the nearest ones are shown below.
               Pick a city above to browse instead.
             </p>
-            <p v-if="!filteredCinemas.length" class="rounded-xl border border-reel bg-bg-alt2 p-6 text-center text-sm text-mist">
+            <div
+              v-if="onlyFavourites && !filteredCinemas.length"
+              class="rounded-xl border border-reel bg-bg-alt2 p-6 text-center text-sm text-mist"
+            >
+              <p class="font-display text-base text-paper">No favourite theatres yet</p>
+              <p class="mt-1 text-xs leading-relaxed">
+                Tap the ♡ beside any theatre name to save it to your favourites.
+              </p>
+              <button
+                class="btn-press mt-4 inline-flex items-center gap-1.5 rounded-lg border border-reel bg-bg px-3.5 py-1.5 text-xs font-semibold text-marquee hover:border-marquee"
+                @click="onlyFavourites = false"
+              >
+                View all theatres
+              </button>
+            </div>
+            <p v-else-if="!filteredCinemas.length" class="rounded-xl border border-reel bg-bg-alt2 p-6 text-center text-sm text-mist">
               No cinemas match “{{ search }}”.
               <button class="ml-1 font-semibold text-marquee underline" @click="search = ''">Clear</button>
             </p>

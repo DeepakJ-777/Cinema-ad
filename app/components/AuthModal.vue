@@ -14,7 +14,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
         <div class="modal-card relative w-full max-w-md rounded-xl border border-reel bg-bg-alt p-6 text-paper shadow-2xl">
           <div class="flex items-start justify-between">
-            <h2 class="font-display text-xl">Welcome back</h2>
+            <h2 class="font-display text-xl">Sign in to SHOWSTART<span class="text-marquee">·</span>IN</h2>
             <button class="btn-press text-xl leading-none text-mist hover:text-paper" aria-label="Close" @click="closeAuthModal">✕</button>
           </div>
           <p class="mt-1 text-[11px] font-medium uppercase tracking-wider text-mist">Browsing is free — accounts are for contributing.</p>
