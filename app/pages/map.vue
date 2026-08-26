@@ -205,7 +205,20 @@ watch([search, city, minRating, nearMode, onlyFavourites], () => {
           @select="onMapSelect"
         />
         <template #fallback>
-          <div class="grid h-full place-items-center font-mono text-xs text-mist">Loading Map…</div>
+          <div class="flex h-full w-full flex-col items-center justify-center bg-bg gap-3.5">
+            <div class="relative flex h-12 w-12 items-center justify-center">
+              <span class="absolute h-full w-full animate-ping rounded-full bg-marquee/20"></span>
+              <span class="relative h-7 w-7 rounded-full border-2 border-marquee border-t-transparent animate-spin"></span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <p class="font-display text-sm font-bold tracking-wider text-paper">
+                SHOWSTART<span class="text-marquee">·MAP</span>
+              </p>
+              <p class="font-mono text-[11px] uppercase tracking-widest text-mist/80 animate-pulse">
+                Loading live map & theatres…
+              </p>
+            </div>
+          </div>
         </template>
       </ClientOnly>
     </div>

@@ -6,6 +6,7 @@ onMounted(() => load())
 </script>
 
 <template>
+  <NuxtLoadingIndicator color="#C6F135" :height="2.5" />
   <div
     class="min-h-screen bg-bg font-body text-mist antialiased flex flex-col"
     :class="{
