@@ -118,11 +118,12 @@ onMounted(async () => {
   L = await import('leaflet')
   map = L.map(el.value, { zoomControl: false, scrollWheelZoom: true })
   L.control.zoom({ position: 'bottomright' }).addTo(map)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles &copy; <a href="https://carto.com/">CARTO</a>',
-  }).addTo(map)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_25wo_1_ca95250577fa150e2e1ea585', {
+  maxZoom: 19,
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles &copy; <a href="https://carto.com/">CARTO</a>',
+}).addTo(map)
+
   // Midpoint between both cities as a neutral fallback before the first fit()
   map.setView(props.center ?? [11.48, 76.93], props.zoom ?? 6)
   rebuild()
