@@ -1,4 +1,4 @@
-# 🎬 ShowStart — Skip the Ads. Catch the Movie.
+# ShowStart — Skip the Ads. Catch the Movie.
 
 [![Live App](https://img.shields.io/badge/Live_App-cinema--community.deepak777.workers.dev-C6F135?style=flat&logo=cloudflare&logoColor=black)](https://cinema-community.deepak777.workers.dev)
 [![Nuxt](https://img.shields.io/badge/Nuxt_4-00DC82?style=flat&logo=nuxtdotjs&logoColor=white)](https://nuxt.com)
@@ -12,7 +12,7 @@
 
 ---
 
-## 🌐 Live Deployment & Links
+## Live Deployment & Links
 
 | Environment | URL |
 | :--- | :--- |
@@ -22,20 +22,20 @@
 
 ---
 
-## ✨ Features
+## Features
 
-- ⏱️ **Real Start-Time Predictions:** Listed showtimes combined with crowdsourced ad durations provide an arrival window (*e.g., "7:00 PM listed · pre-show ~18 min · 🎬 Estimated start ≈ 7:18 PM"*).
-- 🛡️ **Anti-Troll Statistical Aggregation:** Typical ad duration is calculated using a **SQL rolling median over the 20 most recent reports**, automatically rejecting fake inputs and outliers.
-- 🗺️ **Full-Viewport Interactive Map (`/map`):** Leaflet dark-mode map with responsive pins, city switcher (*All / Kochi / Bengaluru*), search filtering, and distance indicators.
-- 📍 **Cache-First "Near Me" Discovery:** Browser Geolocation sorted by distance within a configurable radius (default 25 km). OpenStreetMap sweeps are cached in D1 using **geohash cells**, preventing redundant external API sweeps.
-- 📱 **Mobile-First Action Sheets:** Sleek swipe-to-dismiss theatre details sheet with `popstate` browser history integration so the hardware back button closes modals seamlessly.
-- ⭐ **Multi-Category Audience Ratings:** 5-point breakdown for *Ambience, Staff, Movie Experience, Food & Beverages,* and *Value for Money*, plus verified audience review quotes.
-- 🎬 **Daily Showtimes & Sync Worker:** Automated daily cron + on-demand integration for live showtimes, with manual user-contributed showtime fallback.
-- 🔐 **Secure Authentication:** Better Auth with Google OAuth and Email/Password session management.
+- **Real Start-Time Predictions:** Listed showtimes combined with crowdsourced ad durations provide an arrival window (*e.g., "7:00 PM listed · pre-show ~18 min · 🎬 Estimated start ≈ 7:18 PM"*).
+- **Anti-Troll Statistical Aggregation:** Typical ad duration is calculated using a **SQL rolling median over the 20 most recent reports**, automatically rejecting fake inputs and outliers.
+- **Full-Viewport Interactive Map (`/map`):** Leaflet dark-mode map with responsive pins, city switcher (*All / Kochi / Bengaluru*), search filtering, and distance indicators.
+- **Cache-First "Near Me" Discovery:** Browser Geolocation sorted by distance within a configurable radius (default 25 km). OpenStreetMap sweeps are cached in D1 using **geohash cells**, preventing redundant external API sweeps.
+- **Mobile-First Action Sheets:** Sleek swipe-to-dismiss theatre details sheet with `popstate` browser history integration so the hardware back button closes modals seamlessly.
+- **Multi-Category Audience Ratings:** 5-point breakdown for *Ambience, Staff, Movie Experience, Food & Beverages,* and *Value for Money*, plus verified audience review quotes.
+- **Daily Showtimes & Sync Worker:** Automated daily cron + on-demand integration for live showtimes, with manual user-contributed showtime fallback.
+- **Secure Authentication:** Better Auth with Google OAuth and Email/Password session management.
 
 ---
 
-## 🛠️ Stack
+## Stack
 
 | Layer | Technology |
 | :--- | :--- |
@@ -49,7 +49,7 @@
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Client (Browser / PWA)
@@ -75,7 +75,7 @@ Client (Browser / PWA)
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 20+
@@ -105,7 +105,7 @@ npm run deploy
 
 ---
 
-## 🗄️ Database Commands
+## Database Commands
 
 | Command | Description |
 | :--- | :--- |
@@ -118,7 +118,7 @@ npm run deploy
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 Cinema_ad/
@@ -143,7 +143,7 @@ Cinema_ad/
 
 ---
 
-## 🎨 Design Tokens
+## Design Tokens
 
 | Token | Hex | Role |
 | :--- | :--- | :--- |
@@ -158,7 +158,7 @@ Cinema_ad/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, issues, and feature requests are welcome!
 1. Fork the Project
@@ -169,6 +169,6 @@ Contributions, issues, and feature requests are welcome!
 
 ---
 
-## 📜 License
+## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
