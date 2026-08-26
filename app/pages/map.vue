@@ -212,8 +212,11 @@ watch([search, city, minRating, nearMode, onlyFavourites], () => {
 
     <!-- Floating Top Toolbar (Search + City + Radius/Filters + Embedded Theatres Dropdown) -->
     <div
-      class="pointer-events-none absolute inset-x-0 top-3 z-[1050] flex justify-center px-2 sm:top-4 sm:px-6 transition-opacity duration-200"
-      :class="{ 'max-lg:hidden': sheetOpen }"
+      class="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-2 sm:top-4 sm:px-6 transition-opacity duration-200"
+      :class="[
+        sheetOpen ? 'max-lg:hidden' : '',
+        searchDrawerOpen ? 'z-[1120]' : 'z-[1050]',
+      ]"
     >
       <div
         class="pointer-events-auto flex w-full max-w-5xl flex-col gap-2 rounded-2xl border border-reel/80 bg-bg/95 p-2 shadow-2xl backdrop-blur-xl sm:p-3 transition-all duration-300"
