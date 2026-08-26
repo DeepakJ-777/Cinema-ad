@@ -21,14 +21,14 @@ const dragOffsetY = ref(0)
 const isDragging = ref(false)
 
 function onDragStart(e: TouchEvent) {
-  if (e.touches.length !== 1) return
+  if (!e.touches || e.touches.length !== 1 || !e.touches[0]) return
   dragStartY.value = e.touches[0].clientY
   dragOffsetY.value = 0
   isDragging.value = true
 }
 
 function onDragMove(e: TouchEvent) {
-  if (!isDragging.value) return
+  if (!isDragging.value || !e.touches || !e.touches[0]) return
   const deltaY = e.touches[0].clientY - dragStartY.value
   dragOffsetY.value = deltaY > 0 ? deltaY : deltaY * 0.2
 }

@@ -1,29 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { fmt12, shiftMinutes } from '~/utils/time'
+import { fmt12 } from '~/utils/time'
+import type { Movie, Showtime } from '~/types'
 
 const { showContribute, contributeTarget, closeContribute, submitContribution } = useCinemaStore()
 const { user } = useAuth()
 
 const activeTab = ref<'ad' | 'rating'>('ad')
 
-const bands = [
-  { label: '0–5 min', mid: 5 },
-  { label: '5–10 min', mid: 10 },
-  { label: '10–15 min', mid: 15 },
-  { label: '15–20 min', mid: 20 },
-  { label: '20–25 min', mid: 25 },
-  { label: '25+ min', mid: 30 },
-]
-
 const selectedMovieId = ref<string>('')
+const isCustomMovie = ref(false)
 const selectedShowId = ref<string>('')
+const isCustomShow = ref(false)
 const selectedMinutes = ref<number>(15)
 const isCustomMinutes = ref(false)
 const customMinutesVal = ref<number>(15)
 const busy = ref(false)
 
-const isManualEntry = ref(false)
 const customMovieTitle = ref('')
 const customLanguage = ref('Malayalam')
 const customDate = ref(new Date().toISOString().slice(0, 10))
@@ -43,6 +36,7 @@ const review = ref('')
 const movies = computed(() => contributeTarget.value?.cinema?.movies ?? [])
 
 const selectedMovie = computed(() => {
+  if (isCustomMovie.value) return null
   if (!movies.value.length) return null
   return movies.value.find(m => m.id === selectedMovieId.value) ?? movies.value[0] ?? null
 })
@@ -50,13 +44,51 @@ const selectedMovie = computed(() => {
 const showtimes = computed(() => selectedMovie.value?.showtimes ?? [])
 
 const selectedShow = computed(() => {
+  if (isCustomMovie.value || isCustomShow.value) return null
   if (!showtimes.value.length) return null
   return showtimes.value.find(s => s.id === selectedShowId.value) ?? showtimes.value[0] ?? null
 })
 
+function selectMovie(m: Movie) {
+  isCustomMovie.value = false
+  selectedMovieId.value = m.id
+  customMovieTitle.value = m.title
+  if (m.language) customLanguage.value = m.language
+
+  if (m.showtimes && m.showtimes.length > 0 && m.showtimes[0]) {
+    selectedShowId.value = m.showtimes[0].id
+    isCustomShow.value = false
+  } else {
+    selectedShowId.value = '__custom__'
+    isCustomShow.value = true
+  }
+}
+
+function selectCustomMovie() {
+  isCustomMovie.value = true
+  selectedMovieId.value = '__custom__'
+  isCustomShow.value = true
+  selectedShowId.value = '__custom__'
+  if (!customMovieTitle.value || movies.value.some(m => m.title === customMovieTitle.value)) {
+    customMovieTitle.value = ''
+  }
+}
+
+function selectShow(st: Showtime) {
+  isCustomShow.value = false
+  selectedShowId.value = st.id
+}
+
+function selectCustomShow() {
+  isCustomShow.value = true
+  selectedShowId.value = '__custom__'
+}
+
 watch(selectedMovieId, () => {
-  if (showtimes.value.length > 0) {
-    selectedShowId.value = showtimes.value[0]?.id ?? ''
+  if (!isCustomMovie.value && showtimes.value.length > 0 && !isCustomShow.value) {
+    if (!showtimes.value.some(s => s.id === selectedShowId.value)) {
+      selectedShowId.value = showtimes.value[0]?.id ?? ''
+    }
   }
 })
 
@@ -71,27 +103,35 @@ watch(showContribute, (open) => {
     customStartTime.value = ''
     customEndTime.value = ''
 
-    // If cinema has no movies or no showtimes listed, or opened in manual mode
-    if (target?.isManual || !target?.cinema?.movies?.length || !target.cinema.movies[0]?.showtimes?.length) {
-      isManualEntry.value = true
+    // If cinema has no movies or opened in manual mode
+    if (target?.isManual || !target?.cinema?.movies?.length) {
+      isCustomMovie.value = true
+      isCustomShow.value = true
+      selectedMovieId.value = '__custom__'
+      selectedShowId.value = '__custom__'
     } else {
-      isManualEntry.value = false
-    }
+      isCustomMovie.value = false
 
-    // Initialize movie and showtime selection
-    if (target?.movie) {
-      selectedMovieId.value = target.movie.id
-      customMovieTitle.value = target.movie.title
-      if (target.movie.language) customLanguage.value = target.movie.language
-    } else if (target?.cinema?.movies?.length) {
-      selectedMovieId.value = target.cinema.movies[0]?.id ?? ''
-      if (target.cinema.movies[0]?.language) customLanguage.value = target.cinema.movies[0].language
-    }
+      if (target?.movie) {
+        selectedMovieId.value = target.movie.id
+        customMovieTitle.value = target.movie.title
+        if (target.movie.language) customLanguage.value = target.movie.language
+      } else {
+        selectedMovieId.value = target.cinema.movies[0]?.id ?? ''
+        if (target.cinema.movies[0]?.language) customLanguage.value = target.cinema.movies[0].language
+      }
 
-    if (target?.showtime) {
-      selectedShowId.value = target.showtime.id
-    } else if (showtimes.value.length) {
-      selectedShowId.value = showtimes.value[0]?.id ?? ''
+      if (target?.showtime) {
+        selectedShowId.value = target.showtime.id
+        isCustomShow.value = false
+        customStartTime.value = target.showtime.startTime
+      } else if (showtimes.value.length) {
+        selectedShowId.value = showtimes.value[0]?.id ?? ''
+        isCustomShow.value = false
+      } else {
+        selectedShowId.value = '__custom__'
+        isCustomShow.value = true
+      }
     }
 
     selectedMinutes.value = target?.showtime?.adDurationMin != null ? Math.round(target.showtime.adDurationMin) : 15
@@ -135,16 +175,21 @@ function close() {
 
 const canSubmit = computed(() => {
   if (activeTab.value === 'ad') {
-    if (isManualEntry.value || !movies.value.length) {
+    if (selectedMinutes.value == null || selectedMinutes.value < 0 || selectedMinutes.value > 90) {
+      return false
+    }
+    if (isCustomMovie.value || !movies.value.length) {
       return Boolean(
         customMovieTitle.value.trim().length > 0 &&
-        customStartTime.value.trim().length > 0 &&
-        selectedMinutes.value != null &&
-        selectedMinutes.value >= 0 &&
-        selectedMinutes.value <= 90
+        customStartTime.value.trim().length > 0
       )
     }
-    return Boolean(selectedShow.value?.id && selectedMinutes.value != null && selectedMinutes.value >= 0 && selectedMinutes.value <= 90)
+    if (isCustomShow.value || !showtimes.value.length) {
+      return Boolean(
+        customStartTime.value.trim().length > 0
+      )
+    }
+    return Boolean(selectedShow.value?.id)
   }
   if (Object.values(ratings).some(v => v > 0)) return true
   return review.value.trim().length > 3
@@ -173,7 +218,7 @@ const isDragging = ref(false)
 const isClosing = ref(false)
 
 function onDragStart(e: TouchEvent) {
-  if (e.touches.length !== 1) return
+  if (!e.touches || e.touches.length !== 1 || !e.touches[0]) return
   dragStartY.value = e.touches[0].clientY
   dragStartTime.value = Date.now()
   dragOffsetY.value = 0
@@ -181,7 +226,7 @@ function onDragStart(e: TouchEvent) {
 }
 
 function onDragMove(e: TouchEvent) {
-  if (!isDragging.value || isClosing.value) return
+  if (!isDragging.value || isClosing.value || !e.touches || !e.touches[0]) return
   const currentY = e.touches[0].clientY
   const deltaY = currentY - dragStartY.value
   if (deltaY > 0) {
@@ -218,11 +263,22 @@ async function submit() {
 
   let ok = false
   if (activeTab.value === 'ad') {
-    if (isManualEntry.value || !movies.value.length) {
+    if (isCustomMovie.value || !movies.value.length) {
       ok = await submitContribution({
         cinemaId: t.cinema.id,
         movieTitle: customMovieTitle.value.trim(),
         language: customLanguage.value.trim() || 'General',
+        date: customDate.value || new Date().toISOString().slice(0, 10),
+        startTime: customStartTime.value.trim(),
+        endTime: customEndTime.value.trim(),
+        minutes: selectedMinutes.value,
+      })
+    } else if (isCustomShow.value || !selectedShow.value?.id) {
+      ok = await submitContribution({
+        cinemaId: t.cinema.id,
+        movieId: selectedMovie.value?.id,
+        movieTitle: selectedMovie.value?.title || customMovieTitle.value.trim(),
+        language: selectedMovie.value?.language || customLanguage.value.trim() || 'General',
         date: customDate.value || new Date().toISOString().slice(0, 10),
         startTime: customStartTime.value.trim(),
         endTime: customEndTime.value.trim(),
@@ -281,7 +337,6 @@ async function submit() {
             transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)',
           }"
         >
-          
           <!-- Mobile Pull Handle Area (Drag down to dismiss only from here) -->
           <div
             class="mx-auto flex h-7 w-full cursor-grab items-center justify-center touch-none select-none sm:hidden"
@@ -296,9 +351,29 @@ async function submit() {
           <!-- Sticky Modal Header -->
           <div class="flex shrink-0 items-start justify-between gap-3 border-b border-reel/70 px-5 py-3.5 sm:px-6 sm:py-4">
             <div class="min-w-0 flex-1">
-              <h2 class="font-display text-lg font-bold text-paper sm:text-xl">
-                {{ activeTab === 'ad' ? 'Contribute AD Timing' : 'Rate Theatre Features' }}
-              </h2>
+              <div class="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  :class="[
+                    'font-display text-base font-bold transition-all sm:text-lg',
+                    activeTab === 'ad' ? 'text-paper' : 'text-mist hover:text-paper',
+                  ]"
+                  @click="activeTab = 'ad'"
+                >
+                  Contribute AD Timing
+                </button>
+                <span class="text-mist/40">|</span>
+                <button
+                  type="button"
+                  :class="[
+                    'font-display text-base font-bold transition-all sm:text-lg',
+                    activeTab === 'rating' ? 'text-paper' : 'text-mist hover:text-paper',
+                  ]"
+                  @click="activeTab = 'rating'"
+                >
+                  Rate Theatre
+                </button>
+              </div>
               <p class="mt-0.5 truncate text-xs text-mist">
                 {{ contributeTarget.cinema.name }}
                 <span v-if="contributeTarget.cinema.address" class="text-mist/70"> · {{ contributeTarget.cinema.address }}</span>
@@ -333,22 +408,64 @@ async function submit() {
             <form v-else id="contribute-form" class="space-y-4" @submit.prevent="submit">
               <!-- ══════════════ TAB 1: AD TIMING ══════════════ -->
               <div v-if="activeTab === 'ad'" class="space-y-4">
-                <!-- Mode A: Manual Showtime & Movie Entry (for theatres without listed showtimes) -->
-                <div v-if="isManualEntry || !movies.length" class="space-y-3.5">
-                  <div>
+                <!-- 1. MOVIE SELECTION -->
+                <div>
+                  <div class="flex items-center justify-between">
                     <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
-                      Movie Name
+                      Select Movie
                     </label>
-                    <input
-                      v-model="customMovieTitle"
-                      type="text"
-                      placeholder="e.g. Khalifa"
-                      class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none"
-                    />
+                    <span v-if="isCustomMovie" class="text-[10px] font-medium text-mist">
+                      Custom Movie Mode
+                    </span>
                   </div>
 
-                  <!-- Language & Date -->
-                  <div class="grid grid-cols-2 gap-3">
+                  <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <!-- Pre-listed Movie Buttons -->
+                    <button
+                      v-for="m in movies"
+                      :key="m.id"
+                      type="button"
+                      :class="[
+                        'btn-press flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
+                        !isCustomMovie && selectedMovie?.id === m.id
+                          ? 'border border-marquee bg-marquee text-ink shadow'
+                          : 'border border-reel bg-bg-alt2 text-paper hover:border-marquee/70',
+                      ]"
+                      @click="selectMovie(m)"
+                    >
+                      <span class="max-w-[180px] truncate">{{ m.title }}</span>
+                    </button>
+
+                    <!-- Add Custom Movie Button -->
+                    <button
+                      type="button"
+                      :class="[
+                        'btn-press flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all',
+                        isCustomMovie
+                          ? 'border-marquee bg-marquee text-ink shadow'
+                          : 'border-dashed border-reel bg-bg-alt2/80 text-mist hover:border-marquee hover:text-paper',
+                      ]"
+                      @click="selectCustomMovie"
+                    >
+                      <span class="text-sm font-bold leading-none">+</span>
+                      <span>Custom Movie</span>
+                    </button>
+                  </div>
+
+                  <!-- Custom Movie Input Form (if custom movie selected or no movies exist) -->
+                  <div v-if="isCustomMovie || !movies.length" class="mt-3 space-y-3 rounded-2xl border border-reel bg-bg-alt2/60 p-3.5 sm:p-4">
+                    <div>
+                      <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
+                        Movie Name <span class="text-curtain-bright text-xs">*</span>
+                      </label>
+                      <input
+                        v-model="customMovieTitle"
+                        type="text"
+                        placeholder="e.g. Manjummel Boys"
+                        class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none"
+                      />
+                    </div>
+
                     <div>
                       <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
                         Language
@@ -371,121 +488,108 @@ async function submit() {
                         <option value="Marathi" />
                       </datalist>
                     </div>
-                    <div>
-                      <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
-                        Date
-                      </label>
-                      <input
-                        v-model="customDate"
-                        type="date"
-                        class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none [color-scheme:dark]"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Start Time & End Time -->
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
-                        Start Time
-                      </label>
-                      <input
-                        v-model="customStartTime"
-                        type="text"
-                        placeholder="e.g. 10:30 AM"
-                        class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 font-mono text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[11px] font-semibold uppercase tracking-wider text-mist">
-                        End Time (Optional)
-                      </label>
-                      <input
-                        v-model="customEndTime"
-                        type="text"
-                        placeholder="e.g. 01:30 PM"
-                        class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 font-mono text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none"
-                      />
-                    </div>
                   </div>
                 </div>
 
-                <!-- Mode B: Pick from Listed Movies & Showtimes -->
-                <div v-else class="space-y-4">
-                  <!-- Movie Picker -->
-                  <div v-if="movies.length > 1">
-                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
-                      Select Movie
-                    </label>
-                    <div class="mt-2 flex flex-wrap gap-2">
-                      <button
-                        v-for="m in movies"
-                        :key="m.id"
-                        type="button"
-                        :class="[
-                          'btn-press flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all',
-                          selectedMovie?.id === m.id
-                            ? 'border border-marquee bg-marquee text-ink shadow'
-                            : 'border border-reel bg-bg-alt2 text-paper hover:border-marquee',
-                        ]"
-                        @click="selectedMovieId = m.id"
-                      >
-                        <span class="max-w-[180px] truncate">{{ m.title }}</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div v-else-if="movies.length === 1" class="rounded-xl border border-reel/60 bg-bg-alt2/50 px-3 py-2 text-xs text-mist">
-                    <span>Movie:</span>
-                    <span class="ml-1 font-semibold text-paper">{{ movies[0]?.title }}</span>
-                  </div>
-
-                  <!-- Showtime Picker -->
-                  <div v-if="showtimes.length > 0">
+                <!-- 2. SHOW SESSION SELECTION -->
+                <div>
+                  <div class="flex items-center justify-between">
                     <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
                       Select Show Session
                     </label>
-                    <div class="mt-2 flex flex-wrap gap-2">
-                      <button
-                        v-for="st in showtimes"
-                        :key="st.id"
-                        type="button"
-                        :class="[
-                          'btn-press flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
-                          selectedShow?.id === st.id
-                            ? 'border border-marquee bg-marquee text-ink shadow'
-                            : isPastShow(st.startTime)
-                              ? 'border border-reel/60 bg-bg-alt2/50 text-mist/60 hover:border-marquee'
-                              : 'border border-reel bg-bg-alt2 text-paper hover:border-marquee',
-                        ]"
-                        @click="selectedShowId = st.id"
-                      >
-                        <span>{{ fmt12(st.startTime) }}</span>
-                        <span :class="selectedShow?.id === st.id ? 'opacity-80' : 'opacity-60'" class="text-[10px]">({{ st.format }})</span>
-                        <span
-                          v-if="isPastShow(st.startTime)"
-                          :class="selectedShow?.id === st.id ? 'bg-ink/15 text-ink/85' : 'bg-bg text-mist/60'"
-                          class="rounded px-1 py-0.2 text-[9px] lowercase font-normal"
-                        >
-                          ended
-                        </span>
-                      </button>
-                    </div>
+                    <span v-if="isCustomShow" class="text-[10px] font-medium text-mist">
+                      Custom Timing Mode
+                    </span>
                   </div>
 
-                  <!-- Show Date Picker in Mode B -->
-                  <div>
-                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
-                      Show Date
-                    </label>
-                    <input
-                      v-model="customDate"
-                      type="date"
-                      class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none [color-scheme:dark]"
-                    />
+                  <!-- Showtimes Pills (when not custom movie) -->
+                  <div v-if="!isCustomMovie" class="mt-2 flex flex-wrap items-center gap-2">
+                    <button
+                      v-for="st in showtimes"
+                      :key="st.id"
+                      type="button"
+                      :class="[
+                        'btn-press flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all',
+                        !isCustomShow && selectedShow?.id === st.id
+                          ? 'border border-marquee bg-marquee text-ink shadow'
+                          : isPastShow(st.startTime)
+                            ? 'border border-reel/60 bg-bg-alt2/50 text-mist/60 hover:border-marquee'
+                            : 'border border-reel bg-bg-alt2 text-paper hover:border-marquee',
+                      ]"
+                      @click="selectShow(st)"
+                    >
+                      <span>{{ fmt12(st.startTime) }}</span>
+                      <span :class="!isCustomShow && selectedShow?.id === st.id ? 'opacity-80' : 'opacity-60'" class="text-[10px]">({{ st.format }})</span>
+                      <span
+                        v-if="isPastShow(st.startTime)"
+                        :class="!isCustomShow && selectedShow?.id === st.id ? 'bg-ink/15 text-ink/85' : 'bg-bg text-mist/60'"
+                        class="rounded px-1 py-0.2 text-[9px] lowercase font-normal"
+                      >
+                        ended
+                      </span>
+                    </button>
+
+                    <!-- Add Custom Show Button -->
+                    <button
+                      type="button"
+                      :class="[
+                        'btn-press flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all',
+                        isCustomShow
+                          ? 'border-marquee bg-marquee text-ink shadow'
+                          : 'border-dashed border-reel bg-bg-alt2/80 text-mist hover:border-marquee hover:text-paper',
+                      ]"
+                      @click="selectCustomShow"
+                    >
+                      <span class="text-sm font-bold leading-none">+</span>
+                      <span>Custom Show</span>
+                    </button>
+                  </div>
+
+                  <!-- Custom Show Timing Inputs (if custom show or custom movie or no showtimes) -->
+                  <div v-if="isCustomShow || isCustomMovie || !showtimes.length" class="mt-3 space-y-2 rounded-2xl border border-reel bg-bg-alt2/60 p-3.5 sm:p-4">
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
+                          Start Time <span class="text-curtain-bright text-xs">*</span>
+                        </label>
+                        <input
+                          v-model="customStartTime"
+                          type="text"
+                          placeholder="e.g. 10:30 AM or 18:30"
+                          class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 font-mono text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-mist">
+                          End Time (Optional)
+                        </label>
+                        <input
+                          v-model="customEndTime"
+                          type="text"
+                          placeholder="e.g. 01:30 PM"
+                          class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 font-mono text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <p class="text-[10px] text-mist/70 pt-0.5">
+                      Enter time in 12h (e.g. 2:00 PM, 6:30 PM) or 24h (e.g. 14:00, 18:30) format.
+                    </p>
                   </div>
                 </div>
 
-                <!-- Pre-show AD Duration Card -->
+                <!-- 3. SHOW DATE -->
+                <div>
+                  <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
+                    Show Date
+                  </label>
+                  <input
+                    v-model="customDate"
+                    type="date"
+                    class="mt-1.5 w-full rounded-xl border border-reel bg-bg-alt2 px-3.5 py-2.5 text-xs text-paper placeholder:text-mist/50 focus:border-marquee focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+
+                <!-- 4. PRE-SHOW AD DURATION -->
                 <div>
                   <label class="block text-[11px] font-semibold uppercase tracking-wider text-marquee">
                     Pre-show AD Duration

@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const showId = String(body?.showId || '').trim()
   const cinemaId = String(body?.cinemaId || '').trim()
+  const movieId = String(body?.movieId || '').trim()
   const movieTitle = String(body?.movieTitle || '').trim()
   const language = String(body?.language || '').trim() || 'General'
   const customDate = String(body?.date || '').trim() || new Date().toISOString().slice(0, 10)
@@ -30,25 +31,32 @@ export default defineEventHandler(async (event) => {
   let resolvedMovieId = ''
   let resolvedShowId = showId
 
-  if (showId) {
+  if (showId && showId !== '__custom__') {
     const show = (await db.all(sql`SELECT cinema_id AS cinemaId, movie_id AS movieId FROM shows WHERE id = ${showId}`))[0] as any
     if (!show) throw createError({ statusCode: 404, statusMessage: 'Show not found' })
     resolvedCinemaId = show.cinemaId
     resolvedMovieId = show.movieId
   } else {
-    if (!cinemaId || !movieTitle || !startTime) {
+    if (!cinemaId || (!movieTitle && !movieId) || !startTime) {
       throw createError({ statusCode: 400, statusMessage: 'Please provide movie name and start time' })
     }
 
     // 1. Find or create movie
-    const existingMovie = (await db.all(sql`SELECT id FROM movies WHERE LOWER(title) = LOWER(${movieTitle}) LIMIT 1`))[0] as any
+    let existingMovie: any = null
+    if (movieId && movieId !== '__custom__') {
+      existingMovie = (await db.all(sql`SELECT id, title, language FROM movies WHERE id = ${movieId} LIMIT 1`))[0] as any
+    }
+    if (!existingMovie && movieTitle) {
+      existingMovie = (await db.all(sql`SELECT id, title, language FROM movies WHERE LOWER(title) = LOWER(${movieTitle}) LIMIT 1`))[0] as any
+    }
+
     if (existingMovie) {
       resolvedMovieId = existingMovie.id
     } else {
       resolvedMovieId = `m-${crypto.randomUUID().slice(0, 8)}`
       await db.insert(movies).values({
         id: resolvedMovieId,
-        title: movieTitle,
+        title: movieTitle || 'Movie',
         language: language,
         durationMin: 150,
         hue: 200,
@@ -61,7 +69,7 @@ export default defineEventHandler(async (event) => {
     // 2. Normalize startTime to HH:MM
     let normalizedStart = startTime
     const match = startTime.match(/(\d{1,2})[:.]?(\d{2})?\s*(am|pm)?/i)
-    if (match) {
+    if (match && match[1]) {
       let h = parseInt(match[1], 10)
       const m = parseInt(match[2] || '0', 10)
       const meridiem = (match[3] || '').toLowerCase()
@@ -83,7 +91,7 @@ export default defineEventHandler(async (event) => {
         startTime: normalizedStart,
         format: '2D',
         screen: 'Screen 1',
-        language: language,
+        language: existingMovie?.language || language,
         source: 'user',
       })
     }

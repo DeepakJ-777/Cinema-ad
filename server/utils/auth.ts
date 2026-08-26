@@ -21,6 +21,9 @@ export async function getAuth(event: H3Event) {
       // Keys must match the modelName remaps below (plural table names)
       schema: { users, sessions, accounts, verifications },
     }),
+    emailAndPassword: {
+      enabled: true,
+    },
     socialProviders: {
       ...(googleClientId && googleClientSecret
         ? {

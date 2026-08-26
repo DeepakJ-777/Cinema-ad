@@ -101,7 +101,7 @@ const isDragging = ref(false)
 const isClosing = ref(false)
 
 function onTouchStart(e: TouchEvent) {
-  if (e.touches.length !== 1) return
+  if (!e.touches || e.touches.length !== 1 || !e.touches[0]) return
   touchStartY.value = e.touches[0].clientY
   touchStartTime.value = Date.now()
   dragOffsetY.value = 0
@@ -109,7 +109,7 @@ function onTouchStart(e: TouchEvent) {
 }
 
 function onTouchMove(e: TouchEvent) {
-  if (!isDragging.value || isClosing.value) return
+  if (!isDragging.value || isClosing.value || !e.touches || !e.touches[0]) return
   const currentY = e.touches[0].clientY
   const deltaY = currentY - touchStartY.value
   if (deltaY > 0) {

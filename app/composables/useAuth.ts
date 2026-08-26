@@ -29,9 +29,50 @@ export function useAuth() {
       return { message: msg }
     }
   }
+  async function signInWithEmail(email: string, password: string) {
+    try {
+      const res = await authClient.signIn.email({
+        email,
+        password,
+      })
+      if (res?.error) {
+        toast.push(res.error.message || 'Sign in failed')
+        return res.error
+      }
+      toast.push('Signed in successfully!')
+      return null
+    }
+    catch (err: any) {
+      const msg = err?.message || 'Sign in failed'
+      toast.push(msg)
+      return { message: msg }
+    }
+  }
+
+  async function signUpWithEmail(name: string, email: string, password: string) {
+    try {
+      const res = await authClient.signUp.email({
+        name,
+        email,
+        password,
+      })
+      if (res?.error) {
+        toast.push(res.error.message || 'Sign up failed')
+        return res.error
+      }
+      toast.push('Account created and signed in!')
+      return null
+    }
+    catch (err: any) {
+      const msg = err?.message || 'Sign up failed'
+      toast.push(msg)
+      return { message: msg }
+    }
+  }
+
   async function signOut() {
     await authClient.signOut()
     toast.push('Signed out — browsing stays free, forever.')
   }
-  return { user, isPending, signInWithGoogle, signOut }
+  return { user, isPending, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut }
 }

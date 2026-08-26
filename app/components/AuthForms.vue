@@ -2,8 +2,17 @@
 import { ref } from 'vue'
 
 const emit = defineEmits<{ success: [] }>()
-const { signInWithGoogle } = useAuth()
-const googleBusy = ref(false), errorMsg = ref('')
+const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth()
+
+const authMode = ref<'google' | 'email'>('google')
+const isSignUp = ref(false)
+const googleBusy = ref(false)
+const formBusy = ref(false)
+const errorMsg = ref('')
+
+const name = ref('')
+const email = ref('')
+const password = ref('')
 
 async function handleGoogle() {
   if (googleBusy.value) return
@@ -13,21 +22,44 @@ async function handleGoogle() {
   if (error) {
     googleBusy.value = false
     errorMsg.value = error.message ?? 'Google sign-in failed — please try again.'
+  } else {
+    emit('success')
+  }
+}
+
+async function handleEmailAuth() {
+  if (formBusy.value) return
+  errorMsg.value = ''
+  formBusy.value = true
+
+  let err: any = null
+  if (isSignUp.value) {
+    if (!name.value.trim()) {
+      errorMsg.value = 'Please enter your name'
+      formBusy.value = false
+      return
+    }
+    err = await signUpWithEmail(name.value.trim(), email.value.trim(), password.value)
+  } else {
+    err = await signInWithEmail(email.value.trim(), password.value)
+  }
+
+  formBusy.value = false
+  if (err) {
+    errorMsg.value = err.message || 'Authentication failed'
+  } else {
+    emit('success')
   }
 }
 </script>
 
 <template>
   <div class="mx-auto w-full max-w-sm space-y-4">
-    <p class="text-xs leading-relaxed text-mist">
-      Use your Google account to save favourites, rate theatres, and contribute AD data.
-    </p>
-
     <!-- Google OAuth CTA -->
     <button
       type="button"
-      :disabled="googleBusy"
-      class="btn-press flex w-full items-center justify-center gap-3 rounded-lg border border-reel bg-bg-alt2 py-2.5 text-sm font-semibold text-paper transition-colors hover:border-marquee hover:text-marquee disabled:opacity-50"
+      :disabled="googleBusy || formBusy"
+      class="btn-press flex w-full items-center justify-center gap-3 rounded-xl border border-reel bg-bg-alt2 py-2.5 text-sm font-semibold text-paper transition-colors hover:border-marquee hover:text-marquee disabled:opacity-50"
       @click="handleGoogle"
     >
       <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
@@ -39,6 +71,68 @@ async function handleGoogle() {
       <span>{{ googleBusy ? 'Connecting to Google…' : 'Continue with Google' }}</span>
     </button>
 
-    <p v-if="errorMsg" class="text-center text-xs font-medium text-marquee">{{ errorMsg }}</p>
+    <!-- Divider -->
+    <div class="relative flex items-center justify-center">
+      <div class="w-full border-t border-reel" />
+      <span class="absolute bg-bg-alt2 px-3 text-[11px] uppercase tracking-wider text-mist">or with email</span>
+    </div>
+
+    <!-- Email Form -->
+    <form class="space-y-3" @submit.prevent="handleEmailAuth">
+      <div v-if="isSignUp">
+        <label class="block text-[11px] font-semibold uppercase tracking-wider text-mist">Name</label>
+        <input
+          v-model="name"
+          type="text"
+          placeholder="e.g. John Doe"
+          required
+          class="mt-1 w-full rounded-xl border border-reel bg-bg-alt px-3.5 py-2 text-xs text-paper placeholder:text-mist/40 focus:border-marquee focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold uppercase tracking-wider text-mist">Email</label>
+        <input
+          v-model="email"
+          type="email"
+          placeholder="your@email.com"
+          required
+          class="mt-1 w-full rounded-xl border border-reel bg-bg-alt px-3.5 py-2 text-xs text-paper placeholder:text-mist/40 focus:border-marquee focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold uppercase tracking-wider text-mist">Password</label>
+        <input
+          v-model="password"
+          type="password"
+          placeholder="••••••••"
+          required
+          minlength="6"
+          class="mt-1 w-full rounded-xl border border-reel bg-bg-alt px-3.5 py-2 text-xs text-paper placeholder:text-mist/40 focus:border-marquee focus:outline-none"
+        />
+      </div>
+
+      <p v-if="errorMsg" class="text-center text-xs font-medium text-marquee">{{ errorMsg }}</p>
+
+      <button
+        type="submit"
+        :disabled="formBusy || googleBusy"
+        class="btn-press w-full rounded-xl bg-marquee py-2.5 text-xs font-bold text-ink shadow transition-all hover:bg-curtain-bright disabled:opacity-50"
+      >
+        {{ formBusy ? 'Please wait…' : isSignUp ? 'Create Account & Sign In' : 'Sign In with Email' }}
+      </button>
+    </form>
+
+    <!-- Toggle Sign In / Sign Up -->
+    <div class="text-center">
+      <button
+        type="button"
+        class="text-xs text-mist hover:text-paper"
+        @click="isSignUp = !isSignUp; errorMsg = ''"
+      >
+        {{ isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one" }}
+      </button>
+    </div>
   </div>
 </template>
