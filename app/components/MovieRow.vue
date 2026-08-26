@@ -29,11 +29,16 @@ const movieAdMinutes = computed(() => {
   return Math.round(avg)
 })
 
-/** Availability badge class for a showtime chip (provider data; subtle by design). */
-function availClass(a?: string | null): string {
+/** Availability badge class for a showtime chip. */
+function availClass(a?: string | null, isSelected = false): string {
   if (!a) return ''
+  if (isSelected) {
+    if (a === 'sold_out') return 'bg-ink/20 text-ink line-through decoration-ink/60 font-bold'
+    if (a === 'filling_fast' || a === 'almost_full') return 'bg-ink/20 text-ink font-bold border border-ink/25'
+    return 'bg-ink/15 text-ink font-bold'
+  }
   if (a === 'sold_out') return 'bg-mist/15 text-mist line-through decoration-mist/60'
-  if (a === 'filling_fast' || a === 'almost_full') return 'bg-amber-400/15 text-amber-300'
+  if (a === 'filling_fast' || a === 'almost_full') return 'bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30'
   return ''
 }
 
@@ -45,10 +50,22 @@ function availLabel(a: string): string {
   return a.replace(/_/g, ' ')
 }
 
+function isPastShow(timeStr?: string | null): boolean {
+  if (!timeStr) return false
+  const now = new Date()
+  const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  return timeStr < currentHHMM
+}
+
+function getBestShowId(): string | null {
+  const upcoming = props.movie.showtimes.find(s => !isPastShow(s.startTime))
+  return (upcoming ?? props.movie.showtimes[props.movie.showtimes.length - 1] ?? props.movie.showtimes[0])?.id ?? null
+}
+
 function toggle() {
   open.value = !open.value
-  if (open.value && !selectedShowId.value) {
-    selectedShowId.value = props.movie.showtimes[0]?.id ?? null
+  if (open.value && (!selectedShowId.value || isPastShow(selectedShow.value?.startTime))) {
+    selectedShowId.value = getBestShowId()
   }
 }
 
@@ -91,7 +108,18 @@ function report() {
   openContribute({
     cinema: activeCinema.value,
     movie: props.movie,
-    showtime: selectedShow.value ?? undefined,
+    showtime: selectedShow.value ?? props.movie.showtimes[0] ?? undefined,
+    mode: 'ad',
+  })
+}
+
+function addShowtime() {
+  if (!activeCinema.value) return
+  openContribute({
+    cinema: activeCinema.value,
+    movie: props.movie,
+    mode: 'ad',
+    isManual: true,
   })
 }
 </script>
@@ -104,9 +132,9 @@ function report() {
     ]"
   >
     <div class="flex w-full items-center gap-2 p-3">
-      <button class="flex min-w-0 flex-1 items-center gap-3 text-left" @click="toggle">
+      <button class="flex min-w-0 flex-1 items-center gap-2.5 text-left" @click="toggle">
         <span
-          class="grid h-14 w-10 shrink-0 place-items-center rounded-md text-lg"
+          class="grid h-9 w-7 shrink-0 place-items-center rounded-md text-xs sm:h-10 sm:w-8 sm:text-sm"
           :style="{
             background: `linear-gradient(160deg, hsl(${movie.hue} 16% 26%), hsl(${movie.hue} 18% 14%))`,
           }"
@@ -114,13 +142,19 @@ function report() {
           {{ movie.emoji }}
         </span>
         <span class="min-w-0 flex-1">
-          <span class="flex min-w-0 items-baseline gap-1.5">
-            <span class="truncate font-display text-[15px] leading-tight text-paper">{{ movie.title }}</span>
+          <span class="flex min-w-0 items-center gap-2">
+            <span class="truncate font-display text-[14px] sm:text-[15px] font-semibold text-paper leading-tight">{{ movie.title }}</span>
             <span
               v-if="movieAdMinutes != null"
-              class="shrink-0 whitespace-nowrap text-[11px] font-medium text-mist"
+              class="shrink-0 rounded-md bg-marquee/15 px-2 py-0.5 font-display text-[11px] sm:text-xs font-bold text-marquee border border-marquee/30"
             >
-              • AD ~{{ movieAdMinutes }} min
+              ~{{ movieAdMinutes }} mins AD
+            </span>
+            <span
+              v-else
+              class="shrink-0 rounded-md bg-bg px-1.5 py-0.5 text-[10px] text-mist/60 border border-reel/60"
+            >
+              no AD data yet
             </span>
           </span>
           <span class="mt-0.5 block truncate text-[11px] font-medium uppercase tracking-wider text-mist">
@@ -129,20 +163,35 @@ function report() {
         </span>
       </button>
 
-      <!-- Row-level contribute — opens the existing contribute flow for this movie -->
+      <!-- Row-level contribute button: shown on sm+ desktop screens; on mobile the contribute button lives cleanly inside the expanded showtimes card to prevent congestion -->
       <button
-        class="btn-press shrink-0 whitespace-nowrap rounded-lg border border-reel px-2.5 py-1.5 text-xs font-medium text-paper hover:border-marquee hover:text-marquee"
-        @click="report()"
+        class="btn-press hidden sm:inline-flex shrink-0 whitespace-nowrap rounded-lg border border-reel px-2.5 py-1.5 text-xs font-medium text-paper hover:border-marquee hover:text-marquee"
+        @click.stop="report()"
       >
         Contribute AD data
       </button>
 
       <button
-        :class="['btn-press shrink-0 text-mist transition-transform duration-200', open && 'rotate-180']"
+        :class="[
+          'btn-press grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-reel bg-bg text-paper transition-all hover:border-marquee hover:text-marquee',
+          open ? 'border-marquee text-marquee' : '',
+        ]"
         aria-label="Toggle showtimes"
         @click="toggle"
       >
-        ▾
+        <svg
+          viewBox="0 0 24 24"
+          class="h-4 w-4 transition-transform duration-200"
+          :class="open ? 'rotate-180' : ''"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
       </button>
     </div>
 
@@ -152,29 +201,57 @@ function report() {
     >
       <div class="overflow-hidden">
         <div class="border-t border-reel/70 p-3">
-          <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               v-for="st in movie.showtimes"
               :key="st.id"
               :class="[
-                'btn-press rounded-lg px-3 py-1.5 text-xs transition-colors',
+                'btn-press flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs transition-all',
                 selectedShowId === st.id
-                  ? 'bg-marquee font-semibold text-ink'
-                  : 'border border-reel bg-bg text-paper hover:border-mist/60',
+                  ? 'bg-marquee font-bold text-ink shadow'
+                  : isPastShow(st.startTime)
+                    ? 'border border-reel/60 bg-bg/50 text-mist/50 opacity-60 hover:opacity-100 hover:border-mist/50'
+                    : 'border border-reel bg-bg text-paper hover:border-mist/60',
               ]"
               @click="selectedShowId = st.id"
             >
-              {{ fmt12(st.startTime) }} <span class="opacity-60">{{ st.format }}</span>
+              <span>{{ fmt12(st.startTime) }}</span>
+              <span :class="selectedShowId === st.id ? 'opacity-80' : 'opacity-60'" class="text-[11px]">{{ st.format }}</span>
               <span
-                v-if="st.availability && st.availability !== 'available'"
-                :class="['ml-1 rounded px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide', availClass(st.availability)]"
+                v-if="isPastShow(st.startTime)"
+                :class="selectedShowId === st.id ? 'text-ink/80 font-bold bg-ink/15' : 'text-mist/70 font-medium bg-bg-alt2/80'"
+                class="ml-0.5 rounded px-1 py-0.2 text-[9px] lowercase tracking-normal"
+              >
+                ended
+              </span>
+              <span
+                v-else-if="st.availability && st.availability !== 'available'"
+                :class="['ml-1.5 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider', availClass(st.availability, selectedShowId === st.id)]"
               >
                 {{ availLabel(st.availability) }}
               </span>
             </button>
+
+            <!-- Add more showtimes button -->
+            <button
+              type="button"
+              class="btn-press inline-flex items-center gap-1 rounded-xl border border-dashed border-reel bg-bg/80 px-2.5 py-1.5 text-xs font-semibold text-marquee transition-colors hover:border-marquee hover:bg-bg"
+              @click="addShowtime"
+            >
+              <span class="text-xs leading-none">+</span>
+              <span>Add more showtimes</span>
+            </button>
           </div>
 
           <div v-if="selectedShow" class="mt-3 rounded-lg bg-bg p-3">
+            <div
+              v-if="isPastShow(selectedShow.startTime)"
+              class="mb-2.5 inline-flex items-center gap-1.5 rounded-md border border-reel/70 bg-bg-alt2/70 px-2.5 py-1 text-[11px] text-mist"
+            >
+              <span>🕒</span>
+              <span>This screening was at <strong>{{ fmt12(selectedShow.startTime) }}</strong> and has already concluded today.</span>
+            </div>
+
             <template v-if="estimate">
               <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span class="font-display text-2xl text-marquee">{{ estimate.adsLabel }}</span>
@@ -210,8 +287,11 @@ function report() {
               <span v-if="activeCinema?.overall != null" class="rounded-md bg-marquee/15 px-2 py-1 text-[11px] font-medium text-marquee">
                 ★ {{ activeCinema.overall.toFixed(1) }}/5 theatre
               </span>
-              <span v-if="arriveBy" class="rounded-md bg-bg-alt2 px-2 py-1 text-[11px] font-medium text-body">
+              <span v-if="arriveBy && !isPastShow(selectedShow.startTime)" class="rounded-md bg-bg-alt2 px-2 py-1 text-[11px] font-medium text-body">
                 Arrive by ≈ {{ fmt12(arriveBy) }}
+              </span>
+              <span v-else-if="isPastShow(selectedShow.startTime)" class="rounded-md bg-bg-alt2 px-2 py-1 text-[11px] font-medium text-mist">
+                Concluded screening
               </span>
               <button
                 class="btn-press ml-auto rounded-lg bg-curtain px-4 py-1.5 text-xs font-semibold text-ink hover:bg-curtain-bright"

@@ -6,12 +6,19 @@ export interface ContributeTarget {
   cinema: Cinema
   movie?: Movie
   showtime?: Showtime
+  mode?: 'ad' | 'rating'
+  isManual?: boolean
 }
 
 export interface ContributionInput {
   cinemaId: string
   movieId?: string
   showId?: string
+  movieTitle?: string
+  language?: string
+  date?: string
+  startTime?: string
+  endTime?: string
   minutes?: number
   overall?: number
   ambience?: number
@@ -183,21 +190,10 @@ export function useCinemaStore() {
         if (added > 0 || showtimesStatus === 'synced') await refresh()
         locating.value = false
         nearPhase.value = 'idle'
-        if (showtimesStatus === 'synced')
-          toast.push('📺 Showtimes updated — sorted by distance')
-        else if (showtimesStatus === 'failed')
-          toast.push('⚠️ Couldn’t fetch fresh showtimes — showing what we have')
-        else if (nearbyCount === 0)
-          toast.push(`📡 No cinemas within ${nearRadiusKm.value} km yet — showing the nearest ones`)
-        else if (added > 0)
-          toast.push(`📡 ${added} cinemas near you added — sorted by distance`)
-        else
-          toast.push('📡 Sorted by distance from you')
       },
       () => {
         locating.value = false
         nearPhase.value = 'idle'
-        toast.push('Could not get your location — check browser permissions')
       },
       { timeout: 8000, maximumAge: 60000 },
     )
@@ -248,10 +244,20 @@ export function useCinemaStore() {
 
   async function submitContribution(input: ContributionInput): Promise<boolean> {
     try {
-      if (input.showId && input.minutes != null) {
+      if ((input.showId || (input.movieTitle && input.startTime)) && input.minutes != null) {
         await $fetch('/api/ad-reports', {
           method: 'POST',
-          body: { showId: input.showId, minutes: input.minutes },
+          body: {
+            cinemaId: input.cinemaId,
+            showId: input.showId,
+            movieId: input.movieId,
+            movieTitle: input.movieTitle,
+            language: input.language,
+            date: input.date,
+            startTime: input.startTime,
+            endTime: input.endTime,
+            minutes: input.minutes,
+          },
         })
       }
       const hasRating = ['overall', 'ambience', 'staff', 'movieExperience', 'foodBeverages', 'valueForMoney']

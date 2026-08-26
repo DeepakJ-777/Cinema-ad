@@ -26,7 +26,7 @@ const providerConfirmed = computed(() => {
 
 function rateCinema() {
   if (activeCinema.value) {
-    openContribute({ cinema: activeCinema.value })
+    openContribute({ cinema: activeCinema.value, mode: 'rating' })
   }
 }
 </script>
@@ -125,15 +125,33 @@ function rateCinema() {
               cinema. Check back tomorrow, or tap a show once it's listed to start the
               ad-tracker countdown.
             </p>
-            <p
+            <div
               v-else-if="!activeCinema.movies.length"
-              class="rounded-lg bg-bg-alt2 p-4 text-sm leading-relaxed text-mist"
+              class="rounded-lg bg-bg-alt2 p-4 text-center text-sm leading-relaxed text-mist"
             >
-              Showtimes unavailable right now — this cinema's location comes from
-              OpenStreetMap and its showtimes arrive via our daily sync. Community reports
-              start counting down the ads as soon as a show is listed.
-            </p>
+              <p>No showtimes listed today.</p>
+              <div class="mt-3">
+                <button
+                  type="button"
+                  class="btn-press inline-flex items-center gap-1.5 rounded-xl bg-marquee px-4 py-2.5 text-xs font-bold text-ink shadow-md hover:bg-curtain-bright"
+                  @click="openContribute({ cinema: activeCinema, mode: 'ad', isManual: true })"
+                >
+                  <span class="text-sm leading-none">+</span>
+                  <span>Enter movies & showtimes manually</span>
+                </button>
+              </div>
+            </div>
             <MovieRow v-for="m in activeCinema.movies" :key="m.id" :movie="m" />
+            <div v-if="activeCinema.movies.length" class="pt-2 text-center">
+              <button
+                type="button"
+                class="btn-press inline-flex items-center gap-1.5 rounded-xl border border-dashed border-reel bg-bg-alt2/60 px-4 py-2 text-xs font-semibold text-marquee transition-all hover:border-marquee hover:bg-bg-alt2"
+                @click="openContribute({ cinema: activeCinema, mode: 'ad', isManual: true })"
+              >
+                <span class="text-sm leading-none">+</span>
+                <span>Add another movie or showtime</span>
+              </button>
+            </div>
           </div>
 
         </div>

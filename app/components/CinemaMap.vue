@@ -50,13 +50,28 @@ let L: typeof import('leaflet') | null = null
 const markers = new Map<string, Marker>()
 let userMarker: Marker | null = null
 
-function makeIcon(active: boolean, bare = false) {
+function getCinemaAdDuration(c: Cinema): number | null {
+  const all = (c.movies ?? [])
+    .flatMap(m => m.showtimes)
+    .filter(st => st.adDurationMin != null && st.adReports > 0)
+  if (!all.length) return null
+  const totalWeight = all.reduce((s, st) => s + (st.adReports || 1), 0)
+  const avg = all.reduce((s, st) => s + st.adDurationMin! * (st.adReports || 1), 0) / totalWeight
+  return Math.round(avg)
+}
+
+function makeIcon(active: boolean, bare = false, adDuration: number | null = null) {
+  const hasAd = adDuration != null && adDuration > 0
+  const badgeHtml = hasAd
+    ? `<span class="cine-ad-badge${active ? ' active' : ''}">~${adDuration}m</span>`
+    : ''
+
   return L!.divIcon({
-    html: `<span class="cine-pin${active ? ' active' : ''}${bare ? ' bare' : ''}"></span>`,
+    html: `<div class="cine-pin-node${active ? ' is-active' : ''}${hasAd ? ' has-badge' : ''}">${badgeHtml}<span class="cine-pin${active ? ' active' : ''}${bare ? ' bare' : ''}"></span></div>`,
     className: 'pin-wrap',
-    iconSize: [22, 30],
-    iconAnchor: [11, 28],
-    tooltipAnchor: [0, -26],
+    iconSize: [60, hasAd ? 46 : 30],
+    iconAnchor: [30, hasAd ? 42 : 26],
+    tooltipAnchor: [0, hasAd ? -42 : -26],
   })
 }
 
@@ -67,14 +82,15 @@ function rebuild() {
   for (const c of props.cinemas) {
     const active = c.id === props.selectedId
     const bare = isBare(c)
+    const adDuration = getCinemaAdDuration(c)
     const mk = L.marker([c.lat, c.lng], {
-      icon: makeIcon(active, bare),
+      icon: makeIcon(active, bare, adDuration),
       riseOnHover: true,
       zIndexOffset: active ? 1000 : 0,
     })
       .addTo(map)
       .bindTooltip(
-        `<b>${esc(c.name)}</b>${bare ? '<br/>no showtime data yet' : ''}`,
+        `<b>${esc(c.name)}</b>${adDuration ? `<br/><span style="color:#C6F135;font-weight:600;">~${adDuration} mins ads</span>` : (bare ? '<br/>no showtime data yet' : '')}`,
         {
           className: 'cine-tip',
           direction: 'top',
@@ -100,7 +116,7 @@ function fit(zoom?: number) {
 onMounted(async () => {
   if (!el.value) return
   L = await import('leaflet')
-  map = L.map(el.value, { zoomControl: false, scrollWheelZoom: false })
+  map = L.map(el.value, { zoomControl: false, scrollWheelZoom: true })
   L.control.zoom({ position: 'bottomright' }).addTo(map)
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
@@ -109,9 +125,6 @@ onMounted(async () => {
   }).addTo(map)
   // Midpoint between both cities as a neutral fallback before the first fit()
   map.setView(props.center ?? [11.48, 76.93], props.zoom ?? 6)
-  // Wheel-zoom only after an explicit interaction, so page scroll isn't hijacked.
-  map.on('click', () => map?.scrollWheelZoom.enable())
-  map.on('mouseout', () => map?.scrollWheelZoom.disable())
   rebuild()
   fit(props.zoom)
   ready.value = true
@@ -131,7 +144,7 @@ watch(() => props.selectedId, (id) => {
   if (!map) return
   markers.forEach((mk, cid) => {
     const c = props.cinemas.find(x => x.id === cid)
-    mk.setIcon(makeIcon(cid === id, c ? isBare(c) : false))
+    mk.setIcon(makeIcon(cid === id, c ? isBare(c) : false, c ? getCinemaAdDuration(c) : null))
   })
   const c = props.cinemas.find(x => x.id === id)
   if (c) map.panTo([c.lat, c.lng])
@@ -162,13 +175,13 @@ onUnmounted(() => {
 <template>
   <div class="relative isolate z-0 h-full w-full">
     <div ref="el" class="h-full w-full" />
-    <!-- Floating Locate control — sits above the bottom-right zoom/attribution stack -->
+    <!-- Floating Locate / Relocation control -->
     <button
       v-if="ready"
       type="button"
       title="Center on my location"
       aria-label="Center map on my location"
-      class="btn-press absolute bottom-[110px] right-2.5 z-[1000] grid h-9 w-9 place-items-center rounded-lg border border-reel bg-bg-alt2/95 text-paper shadow-lg backdrop-blur-sm hover:border-marquee hover:text-marquee"
+      class="btn-press absolute bottom-[76px] right-3.5 z-[1000] grid h-10 w-10 place-items-center rounded-xl border border-reel bg-bg-alt2/95 text-paper shadow-lg backdrop-blur-sm hover:border-marquee hover:text-marquee lg:bottom-[118px] lg:right-3 lg:h-[34px] lg:w-[34px] lg:rounded-lg"
       :class="{ 'animate-pulse cursor-wait': locating }"
       :disabled="locating"
       @click="locateMe"

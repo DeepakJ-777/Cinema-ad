@@ -50,6 +50,16 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
+/* Remove default browser search clear (cross) buttons */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
 /* ---------------- Section divider (hairline) ---------------- */
 .film-strip {
   height: 1px;
@@ -122,12 +132,70 @@ select:focus-visible {
 }
 
 .leaflet-control-zoom {
+  display: none !important;
   border: none !important;
 }
 
+.leaflet-bottom.leaflet-right {
+  bottom: 12px !important;
+  right: 12px !important;
+}
+
+@media (min-width: 1024px) {
+  .leaflet-control-zoom {
+    display: block !important;
+  }
+  .leaflet-bottom.leaflet-right {
+    bottom: 20px !important;
+    right: 12px !important;
+  }
+}
+
 .pin-wrap {
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+}
+
+.cine-pin-node {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: auto;
+}
+
+.cine-ad-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 3px;
+  padding: 1px 5px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #101010;
+  background: var(--color-marquee);
+  border: 1.5px solid #0E0E0E;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.leaflet-marker-icon:hover .cine-ad-badge {
+  transform: scale(1.1);
+}
+
+.cine-ad-badge.active {
+  background: var(--color-curtain-bright);
+  box-shadow: 0 0 0 2px rgb(198 241 53 / 0.4), 0 2px 8px rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
 }
 
 .cine-pin {
@@ -135,6 +203,7 @@ select:focus-visible {
   display: block;
   width: 20px;
   height: 20px;
+  margin-bottom: 4px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   background: var(--color-marquee);
@@ -212,15 +281,29 @@ select:focus-visible {
   color: var(--color-marquee);
 }
 
+.leaflet-bar {
+  border-radius: 8px !important;
+  overflow: hidden;
+  border: 1px solid var(--color-reel) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
 .leaflet-bar a {
-  background: var(--color-bg-alt2);
-  color: var(--color-paper);
-  border-bottom-color: var(--color-reel);
+  width: 34px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  background: var(--color-bg-alt2) !important;
+  color: var(--color-paper) !important;
+  border-bottom: 1px solid var(--color-reel) !important;
+}
+
+.leaflet-bar a:last-child {
+  border-bottom: none !important;
 }
 
 .leaflet-bar a:hover {
-  background: #262626;
-  color: var(--color-marquee);
+  background: #262626 !important;
+  color: var(--color-marquee) !important;
 }
 
 /* ---------------- Interactions ---------------- */

@@ -47,58 +47,116 @@ onUnmounted(() => {
   <header
     ref="headerEl"
     :class="[
-      'sticky top-0 z-40 transition-colors duration-300',
-      scrolled ? 'border-b border-reel/70 bg-bg/85 backdrop-blur-md' : 'bg-transparent',
+      'sticky top-0 z-[1200] transition-colors duration-300',
+      scrolled || route.path === '/map' ? 'border-b border-reel/70 bg-bg/90 backdrop-blur-md' : 'bg-transparent',
     ]"
   >
-    <nav class="flex w-full items-center gap-3 px-4 py-3 sm:px-6">
-      <NuxtLink to="/" aria-label="ShowStart home" class="flex shrink-0 items-center gap-2.5" @click="goHome">
-        <span class="grid h-8 w-8 place-items-center rounded-lg bg-marquee">
+    <nav class="flex w-full items-center justify-between gap-2 px-3 py-2.5 sm:px-6 sm:py-3">
+      <!-- Left: Brand Logo -->
+      <NuxtLink to="/" aria-label="ShowStart home" class="flex shrink-0 items-center gap-2" @click="goHome">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-marquee shrink-0">
           <svg viewBox="0 0 24 24" class="h-[18px] w-[18px]" fill="none" stroke="#101010" stroke-width="1.8" aria-hidden="true">
             <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
             <path d="M3.5 9h17M8 5.5v3.5M16 5.5v3.5" stroke-linecap="round" />
             <path d="M10.2 12.4l4 2.1-4 2.1z" fill="#101010" stroke="none" />
           </svg>
         </span>
-        <span class="font-display text-[15px] font-bold tracking-wider text-paper">
-          SHOWSTART<span class="text-marquee">·</span>IN
+        <span class="font-display text-[13px] sm:text-[15px] font-bold tracking-wider text-paper">
+          SHOWSTART<span class="text-marquee">·IN</span>
         </span>
-
       </NuxtLink>
 
-      <!-- Account stays inline on desktop; on mobile it moves into the ☰ menu -->
-      <div class="ml-auto hidden items-center gap-3 lg:flex">
-        <button
-          v-if="!user"
-          class="btn-press rounded-lg bg-marquee px-4 py-1.5 text-sm font-semibold text-ink hover:bg-curtain-bright"
-          @click="openAuthModal()"
+      <!-- Center (Mobile only): Sleek Top Page Switcher (Home ↔ Map) -->
+      <div class="flex items-center rounded-xl border border-reel bg-bg-alt2/90 p-0.5 md:hidden" role="navigation" aria-label="Mobile page switcher">
+        <NuxtLink
+          to="/"
+          :class="[
+            'btn-press flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold uppercase tracking-wider transition-colors',
+            route.path === '/'
+              ? 'bg-marquee text-ink shadow'
+              : 'text-mist hover:text-paper',
+          ]"
+          @click="goHome"
         >
-          Sign in
-        </button>
-        <div v-else class="flex items-center gap-2">
-          <span class="hidden text-xs font-medium text-mist sm:inline">● {{ user.name }}</span>
-          <button
-            :title="`Sign out ${user.name}`"
-            class="btn-press grid h-8 w-8 place-items-center rounded-full border border-reel bg-bg-alt2 font-display text-sm text-marquee hover:border-marquee"
-            @click="openSignOutModal()"
-          >
-            {{ user.name[0] }}
-          </button>
-        </div>
+          <span>Home</span>
+        </NuxtLink>
+        <NuxtLink
+          to="/map"
+          :class="[
+            'btn-press flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold uppercase tracking-wider transition-colors',
+            route.path === '/map'
+              ? 'bg-marquee text-ink shadow'
+              : 'text-mist hover:text-paper',
+          ]"
+        >
+          <span>Map</span>
+        </NuxtLink>
       </div>
 
-      <!-- Mobile ☰ — secondary navigation -->
-      <button
-        type="button"
-        class="btn-press ml-auto grid h-8 w-8 place-items-center rounded-lg border border-reel bg-bg-alt2 text-paper hover:border-marquee hover:text-marquee lg:hidden"
-        :aria-expanded="menuOpen"
-        aria-label="Open menu"
-        @click="menuOpen = !menuOpen"
-      >
-        <svg viewBox="0 0 24 24" class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      </button>
+      <!-- Desktop Navigation Links -->
+      <div class="hidden items-center gap-1.5 md:flex md:ml-4">
+        <NuxtLink
+          to="/"
+          class="rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors"
+          :class="route.path === '/' ? 'bg-bg-alt text-marquee' : 'text-mist hover:text-paper'"
+          @click="goHome"
+        >
+          Home
+        </NuxtLink>
+        <NuxtLink
+          to="/map"
+          class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors"
+          :class="route.path === '/map' ? 'bg-bg-alt text-marquee' : 'text-mist hover:text-paper'"
+        >
+          <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 21.5s-6.5-5.6-6.5-10.5a6.5 6.5 0 1 1 13 0c0 4.9-6.5 10.5-6.5 10.5z" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="12" cy="10.5" r="2.3" />
+          </svg>
+          <span>Live Map</span>
+        </NuxtLink>
+        <NuxtLink
+          to="/#how"
+          class="rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-mist transition-colors hover:text-paper"
+        >
+          How It Works
+        </NuxtLink>
+      </div>
+
+      <!-- Right: Account / ☰ menu -->
+      <div class="flex items-center gap-2">
+        <div class="hidden items-center gap-3 lg:flex">
+          <button
+            v-if="!user"
+            class="btn-press rounded-lg bg-marquee px-4 py-1.5 text-sm font-semibold text-ink hover:bg-curtain-bright"
+            @click="openAuthModal()"
+          >
+            Sign in
+          </button>
+          <div v-else class="flex items-center gap-2">
+            <span class="hidden text-xs font-medium text-mist sm:inline">● {{ user.name }}</span>
+            <button
+              :title="`Sign out ${user.name}`"
+              class="btn-press grid h-8 w-8 place-items-center rounded-full border border-reel bg-bg-alt2 font-display text-sm text-marquee hover:border-marquee"
+              @click="openSignOutModal()"
+            >
+              {{ user.name[0] }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile ☰ — secondary navigation -->
+        <button
+          type="button"
+          class="btn-press grid h-8 w-8 place-items-center rounded-lg border border-reel bg-bg-alt2 text-paper hover:border-marquee hover:text-marquee lg:hidden"
+          :aria-expanded="menuOpen"
+          aria-label="Open menu"
+          @click="menuOpen = !menuOpen"
+        >
+          <svg viewBox="0 0 24 24" class="h-[18px] w-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+      </div>
     </nav>
 
     <!-- Mobile secondary menu panel (account + info) -->
@@ -136,23 +194,39 @@ onUnmounted(() => {
 
         <div class="my-2 h-px bg-reel" />
 
-        <p class="px-3 pb-1 pt-1 font-mono text-[10px] uppercase tracking-widest text-mist">Explore</p>
-        <a
-          href="#how"
+        <p class="px-3 pb-1 pt-1 font-mono text-[10px] uppercase tracking-widest text-mist">Navigation</p>
+        <NuxtLink
+          to="/"
+          class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-paper hover:bg-bg-alt2"
+          role="menuitem"
+          @click="menuOpen = false"
+        >
+          Home
+        </NuxtLink>
+        <NuxtLink
+          to="/map"
+          class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-paper hover:bg-bg-alt2"
+          role="menuitem"
+          @click="menuOpen = false"
+        >
+          Live Map
+        </NuxtLink>
+        <NuxtLink
+          to="/#how"
           class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-paper hover:bg-bg-alt2"
           role="menuitem"
           @click="menuOpen = false"
         >
           How it works
-        </a>
-        <a
-          href="#about"
+        </NuxtLink>
+        <NuxtLink
+          to="/#about"
           class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-paper hover:bg-bg-alt2"
           role="menuitem"
           @click="menuOpen = false"
         >
           About ShowStart
-        </a>
+        </NuxtLink>
       </div>
     </Transition>
   </header>

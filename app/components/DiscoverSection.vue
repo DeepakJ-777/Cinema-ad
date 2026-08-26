@@ -29,13 +29,15 @@ const { ids: favIds } = useFavourites()
 const favCount = computed(() => favIds.value.length)
 const toast = useToast()
 
-function toggleFavouritesFilter() {
+const favouritesOpen = useState('cc:fav-open', () => false)
+
+function openFavouritesModal() {
   if (!user.value) {
     toast.push('Sign in to view your favourite theatres')
     openAuthModal()
     return
   }
-  onlyFavourites.value = !onlyFavourites.value
+  favouritesOpen.value = true
 }
 
 const cityOptions = [
@@ -69,9 +71,8 @@ const noNearby = computed(() =>
   && distanceTo(filteredCinemas.value[0]!) != null
   && (distanceTo(filteredCinemas.value[0]!) ?? Infinity) > nearRadiusKm.value)
 
-/** Mobile action sheet: opens when a map marker is tapped (lg: hidden —
- *  desktop keeps the existing tap-to-select + inline CinemaDetail flow). */
-const sheetOpen = ref(false)
+/** Mobile action sheet: opens when a map marker is tapped */
+const sheetOpen = useState('cc:sheet-open', () => false)
 
 function onMapSelect(id: string) {
   selectCinema(id) // existing selection flow (marker highlight + panTo)
@@ -94,8 +95,8 @@ function viewCinemaDetails() {
 
 /** Row-level quick actions: open the existing contribute modal (ad duration +
  *  ratings in one form) for the tapped cinema. */
-function contributeFor(c: Cinema) {
-  openContribute({ cinema: c })
+function contributeFor(c: Cinema, mode: 'ad' | 'rating' = 'ad') {
+  openContribute({ cinema: c, mode })
 }
 
 /* Mobile list collapsing: below lg the CINEMAS list starts as a short preview
@@ -168,12 +169,21 @@ watch([search, city, minRating, nearMode, onlyFavourites], () => {
               v-model="search"
               type="search"
               placeholder="Search cinemas…"
-              class="w-full sm:w-48 md:w-56 rounded-full border border-reel bg-bg-alt py-1.5 pl-8 pr-3 text-xs text-paper placeholder:text-mist/60 focus:border-marquee focus:outline-none"
+              class="w-full sm:w-48 md:w-56 rounded-full border border-reel bg-bg-alt py-1.5 pl-8 pr-7 text-xs text-paper placeholder:text-mist/60 focus:border-marquee focus:outline-none"
             />
             <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-mist" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
               <circle cx="11" cy="11" r="6.5" />
               <path d="M16 16l4.5 4.5" stroke-linecap="round" />
             </svg>
+            <button
+              v-if="search"
+              type="button"
+              class="btn-press absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-mist hover:text-paper"
+              aria-label="Clear search"
+              @click="search = ''"
+            >
+              ✕
+            </button>
           </label>
 
           <!-- Filter / Control Group: right-aligned -->
@@ -207,19 +217,19 @@ watch([search, city, minRating, nearMode, onlyFavourites], () => {
               {{ locating ? 'Locating…' : nearMode ? 'Near You' : 'Near Me' }}
             </button>
 
-            <!-- Favourites Filter Button -->
+            <!-- Favourites Filter / Modal Button -->
             <button
               :class="[
                 'btn-press flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors',
-                onlyFavourites
+                favouritesOpen
                   ? 'border-marquee bg-marquee text-ink hover:bg-curtain-bright'
                   : 'border-reel text-paper hover:border-mist/60',
               ]"
-              :aria-pressed="onlyFavourites"
-              title="Filter by your favourite theatres"
-              @click="toggleFavouritesFilter()"
+              :aria-pressed="favouritesOpen"
+              title="View your favourite theatres"
+              @click="openFavouritesModal()"
             >
-              <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" :fill="onlyFavourites ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" :fill="favCount > 0 ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <path d="M12 20s-7.5-4.6-7.5-10a4.6 4.6 0 0 1 7.5-3.6A4.6 4.6 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
               <span>Favourites</span>
@@ -282,22 +292,10 @@ watch([search, city, minRating, nearMode, onlyFavourites], () => {
         <!-- Ticket list panel -->
         <div id="cinema-list" class="mx-4 mt-5 flex flex-col rounded-2xl border border-reel bg-bg-alt scroll-mt-24 lg:mx-0 lg:mt-0 lg:h-[620px]">
           <div class="flex items-center gap-3 border-b border-reel/70 p-4">
-            <label class="relative flex-1 md:hidden">
-              <input
-                v-model="search"
-                type="search"
-                placeholder="Search cinemas…"
-                class="w-full rounded-lg border border-reel bg-bg py-1.5 pl-8 pr-3 text-sm text-paper placeholder:text-mist/60 focus:border-marquee focus:outline-none"
-              />
-              <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-mist" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <circle cx="11" cy="11" r="6.5" />
-                <path d="M16 16l4.5 4.5" stroke-linecap="round" />
-              </svg>
-            </label>
-            <span class="hidden text-sm font-semibold uppercase tracking-widest text-mist md:block">
+            <span class="text-sm font-semibold uppercase tracking-widest text-mist">
               Cinemas
             </span>
-            <span class="ml-auto hidden shrink-0 text-[11px] uppercase tracking-widest text-mist/70 md:block">
+            <span class="ml-auto shrink-0 text-[11px] uppercase tracking-widest text-mist/70">
               tap a card
             </span>
           </div>
@@ -336,8 +334,8 @@ watch([search, city, minRating, nearMode, onlyFavourites], () => {
               :distance-km="distanceTo(c)"
               show-city
               @select="selectCinema(c.id, { scroll: true })"
-              @contribute="contributeFor(c)"
-              @rate="contributeFor(c)"
+              @contribute="contributeFor(c, 'ad')"
+              @rate="contributeFor(c, 'rating')"
             />
 
             <!-- Mobile only: progressive list controls, side by side.

@@ -1,12 +1,5 @@
 <script setup lang="ts">
-const { requestLocation } = useCinemaStore()
-
-/** Primary CTA: jump to Discover and ask for location — the label promises "near you". */
-function findCinema() {
-  if (!import.meta.client) return
-  document.getElementById('discover')?.scrollIntoView({ behavior: 'smooth' })
-  requestLocation()
-}
+// Primary CTA navigates directly to the interactive map discovery application (/map)
 </script>
 
 <template>
@@ -24,12 +17,16 @@ function findCinema() {
       </p>
 
       <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <button
-          class="btn-press rounded-lg bg-marquee px-6 py-2.5 text-sm font-semibold text-ink hover:bg-curtain-bright"
-          @click="findCinema"
+        <NuxtLink
+          to="/map"
+          class="btn-press flex items-center gap-2 rounded-lg bg-marquee px-6 py-2.5 text-sm font-semibold text-ink hover:bg-curtain-bright"
         >
-          Find Theatres Near You
-        </button>
+          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 21.5s-6.5-5.6-6.5-10.5a6.5 6.5 0 1 1 13 0c0 4.9-6.5 10.5-6.5 10.5z" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="12" cy="10.5" r="2.3" />
+          </svg>
+          <span>Explore Live Map</span>
+        </NuxtLink>
 
         <a
           href="#how"

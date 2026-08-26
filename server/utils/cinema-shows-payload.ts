@@ -43,15 +43,32 @@ export async function buildCinemaPayloads(db: Db, cinemas: CinemaPayloadRow[]): 
 
   const movies = (await db.all(sql`SELECT id, title, language, duration_min AS durationMin, hue, emoji FROM movies`)) as any[]
   const movieMap = new Map(movies.map(m => [m.id, m]))
-
-  const showsQ = (today: boolean) => db.all(sql`
+  const showsQ = () => db.all(sql`
     SELECT s.id, s.cinema_id AS cinemaId, s.movie_id AS movieId, s.start_time AS startTime, s.format, s.screen,
-           s.availability_status AS availability, s.show_date AS showDate
+           s.availability_status AS availability, s.show_date AS showDate, s.source
     FROM shows s
-    WHERE s.cinema_id IN (${idList}) ${today ? sql`AND s.show_date = date('now', '+330 minutes')` : sql``}
+    WHERE s.cinema_id IN (${idList})
+      AND (
+        -- 1) Exactly today's show (synced or current date)
+        s.show_date = date('now', '+330 minutes')
+        -- 2) Manually contributed show (source = 'user'): valid within 7 days (weekly cinema cycle)
+        OR (
+          s.source = 'user'
+          AND s.show_date >= date('now', '+330 minutes', '-7 days')
+        )
+      )
     ORDER BY s.start_time`)
-  let shows = (await showsQ(true)) as any[]
-  if (!shows.length) shows = (await showsQ(false)) as any[] // stale-seed fallback
+  let shows = (await showsQ()) as any[]
+  if (!shows.length) {
+    // Fallback if no current shows exist at all (excluding manual shows older than 7 days)
+    shows = (await db.all(sql`
+      SELECT s.id, s.cinema_id AS cinemaId, s.movie_id AS movieId, s.start_time AS startTime, s.format, s.screen,
+             s.availability_status AS availability, s.show_date AS showDate, s.source
+      FROM shows s
+      WHERE s.cinema_id IN (${idList})
+        AND (s.source != 'user' OR s.show_date >= date('now', '+330 minutes', '-7 days'))
+      ORDER BY s.start_time`)) as any[]
+  }
 
   // Typical ad duration = MEDIAN of the 20 most recent reports for the show
   // (median resists outliers; the recency window keeps the estimate current).
@@ -90,9 +107,30 @@ export async function buildCinemaPayloads(db: Db, cinemas: CinemaPayloadRow[]): 
 
   return cinemas.map((c) => {
     const byMovie = new Map<string, any[]>()
-    for (const s of shows.filter(s => s.cinemaId === c.id)) {
-      const arr = byMovie.get(s.movieId) ?? []; arr.push(s); byMovie.set(s.movieId, arr)
+    // Deduplicate shows by (movieId, startTime) preferring the latest show_date
+    const cinemaShows = shows
+      .filter(s => s.cinemaId === c.id)
+      .sort((a, b) => (b.showDate || '').localeCompare(a.showDate || ''))
+
+    const seenKeys = new Set<string>()
+    const uniqueShows: any[] = []
+    for (const s of cinemaShows) {
+      const key = `${s.movieId}-${s.startTime}`
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        uniqueShows.push(s)
+      }
     }
+
+    // Sort by startTime
+    uniqueShows.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))
+
+    for (const s of uniqueShows) {
+      const arr = byMovie.get(s.movieId) ?? []
+      arr.push(s)
+      byMovie.set(s.movieId, arr)
+    }
+
     const g = ratingRows.find(r => r.cinemaId === c.id)
     return {
       id: c.id,
@@ -110,18 +148,28 @@ export async function buildCinemaPayloads(db: Db, cinemas: CinemaPayloadRow[]): 
         foodBeverages: r1(g.foodBeverages), valueForMoney: r1(g.valueForMoney),
       } : null,
       reviews: reviewRows.filter(r => r.cinemaId === c.id).slice(0, 3),
-      movies: [...byMovie.entries()].map(([movieId, sts]) => {
-        const m = movieMap.get(movieId)!
-        return {
-          id: m.id, title: m.title, language: m.language, durationMin: m.durationMin, hue: m.hue, emoji: m.emoji,
-          showtimes: sts.map(s => ({
-            id: s.id, startTime: s.startTime, format: s.format, screen: s.screen,
-            availability: s.availability ?? null,
-            adDurationMin: medianMap.get(s.id) != null ? r1(medianMap.get(s.id)) : null,
-            adReports: countMap.get(s.id) ?? 0,
-          })),
-        }
-      }),
+      movies: [...byMovie.entries()]
+        .filter(([movieId]) => movieMap.has(movieId))
+        .map(([movieId, sts]) => {
+          const m = movieMap.get(movieId)!
+          return {
+            id: m.id,
+            title: m.title,
+            language: m.language,
+            durationMin: m.durationMin,
+            hue: m.hue,
+            emoji: m.emoji,
+            showtimes: sts.map(st => ({
+              id: st.id,
+              startTime: st.startTime,
+              format: st.format,
+              screen: st.screen,
+              availability: st.availability ?? null,
+              adDurationMin: medianMap.get(st.id) != null ? r1(medianMap.get(st.id)!) : null,
+              adReports: countMap.get(st.id) ?? 0,
+            })),
+          }
+        }),
     }
   })
 }
